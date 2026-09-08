@@ -1,1 +1,1331 @@
-<!doctype html><meta charset="utf-8"><title>Consulta Municípios GO</title><p style="font-family:sans-serif;padding:40px">Em preparação. Volte em alguns minutos.</p>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consulta Municípios GO</title>
+<style>
+:root{
+  /* identidade Vanderlan Cardoso — ver docs/memoria/06-design.md */
+  --azul:#345da8; --azul-escuro:#243f78; --azul-claro:#e8eef9; --verde:#00a651; --amarelo:#fad107;
+  --ouro:#c9a227; --ouro-claro:#e6c766; --ouro-escuro:#9c7a12; --branco:#fff; --fundo:#f5f7fb;
+  --texto:#1b2333; --texto-2:#4a5568;
+
+  --bg:var(--fundo); --surface:var(--branco); --surface-2:#eef1f8; --line:#d7deec; --line-2:#e3e8f4;
+  --ink:var(--texto); --ink-2:var(--texto-2); --ink-3:#7b879b;
+  --accent:var(--azul); --accent-2:#4b74bd; --accent-soft:var(--azul-claro); --bar:var(--azul);
+  --good:var(--verde); --good-bg:#e1f6ea; --warn:#8a6a00; --warn-bg:#fff3d6; --serious:#c2542a; --serious-bg:#fde9e0; --crit:#d03b3b; --crit-bg:#fbe3e3; --neutral-bg:#eceef4;
+  --radius:10px; --shadow:0 1px 2px rgba(27,35,51,.05),0 4px 14px rgba(27,35,51,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;cursor:pointer}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px;min-height:44px}
+input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.hidden{display:none!important}
+.assinatura{font-family:Georgia,'Times New Roman',serif;font-style:italic;color:var(--ouro);letter-spacing:.2px}
+.rodape{max-width:1320px;margin:26px auto 4px;padding:14px 18px 22px;display:flex;justify-content:center;align-items:center}
+.rodape .assinatura{font-size:13px}
+@media print{.rodape{display:none}}
+
+/* topo */
+header.top{position:sticky;top:0;z-index:20;background:var(--azul);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.top .wrap{max-width:1320px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;line-height:1.15}
+.logo-marca{height:44px;width:auto;display:block;border-radius:4px}
+.brand-txt{display:flex;flex-direction:column}
+.brand b{font-size:17px;letter-spacing:.2px}
+.brand span{font-size:12px;opacity:.85}
+.search{flex:1;min-width:240px;position:relative}
+.search input{width:100%;background:#fff;border:0;padding-left:36px;min-height:44px}
+.search svg{position:absolute;left:11px;top:14px;width:16px;height:16px;fill:none;stroke:#52514e;stroke-width:2}
+nav.tabs{display:flex;gap:2px;flex-wrap:wrap}
+nav.tabs button{background:transparent;border:0;border-bottom:3px solid transparent;color:#fff;opacity:.8;padding:10px 12px;border-radius:8px 8px 0 0;font-weight:600;font-size:14.5px;position:relative;min-height:44px}
+nav.tabs button:hover{opacity:1;background:rgba(255,255,255,.1)}
+nav.tabs button.on{opacity:1;background:rgba(255,255,255,.16);border-bottom-color:var(--ouro)}
+
+main{max-width:1320px;margin:0 auto;padding:18px}
+.aviso{background:#fff8e1;border:1px solid #f1dc9c;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;color:#5b4700;font-size:13px}
+h1{font-size:22px;margin:4px 0 12px}
+h2{font-size:16px;margin:0 0 10px;color:var(--ink)}
+h3{font-size:14px;margin:18px 0 8px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.4px}
+.muted{color:var(--ink-3)}
+.small{font-size:12px}
+.secao{display:flex;align-items:baseline;gap:10px;margin:18px 0 10px;flex-wrap:wrap}
+.secao h2{margin:0;font-size:17px}
+.secao .small{color:var(--ink-3)}
+
+/* barra de filtro global: trilha + campos */
+.fbar{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:10px 14px 6px;margin-bottom:14px;box-shadow:var(--shadow)}
+.trilha{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px;font-size:13.5px}
+.trilha .mig{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink-2);cursor:pointer;font-weight:600}
+.trilha .mig:hover{border-color:var(--accent-2);color:var(--accent)}
+.trilha .mig.raiz{background:var(--accent);color:#fff;border-color:var(--accent)}
+.trilha .mig .k{font-weight:400;opacity:.75;margin-right:4px}
+.trilha .mig .x{margin-left:6px;opacity:.6}
+.trilha .mig .x:hover{opacity:1;color:var(--crit)}
+.trilha .sep{color:var(--ink-3)}
+.trilha .lbl{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;margin-right:4px}
+.dica{font-size:12.5px;color:var(--ink-3);margin:-6px 0 12px}
+.filtros-det summary{cursor:pointer;font-weight:700;color:var(--accent);list-style:none;padding:8px 4px;font-size:14px;user-select:none;min-height:44px;display:flex;align-items:center}
+.filtros-det summary::-webkit-details-marker{display:none}
+.filtros-det summary::marker{display:none;content:''}
+.filtros-det summary:hover{text-decoration:underline}
+.filtros-det[open] summary{margin-bottom:2px}
+
+/* cartões de números */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--line-2);border-top:3px solid var(--ouro);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.tile .lbl{font-size:12.5px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.4px}
+.tile .val{font-size:28px;font-weight:700;margin-top:4px;letter-spacing:-.3px;color:var(--texto)}
+.tile .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.tile.click{cursor:pointer}
+.tile.click:hover{border-color:var(--accent-2)}
+.tile.of{border-left:4px solid #eb6834}
+.tile.em{border-left:4px solid var(--accent-2)}
+
+/* grade de painéis */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.card h2{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 .small{font-weight:400;color:var(--ink-3)}
+
+/* barras horizontais */
+.bars{display:flex;flex-direction:column;gap:5px}
+.bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;padding:2px 4px;border-radius:6px;position:relative}
+.bar:hover{background:var(--surface-2)}
+.bar .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.bar .t{height:14px;background:var(--surface-2);border-radius:0 4px 4px 0;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
+.bar.sec .t i{background:#eb6834}
+.bar .v{font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+.bar .v small{color:var(--ink-3)}
+.mais{margin-top:6px}
+.mais summary{cursor:pointer;font-size:12px;color:var(--accent)}
+
+/* colunas (gráfico vertical) */
+.cols{display:flex;align-items:flex-end;gap:6px;height:190px;padding:22px 4px 0;border-bottom:1px solid var(--line)}
+.cols.denso{padding-top:8px}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;min-width:0;position:relative;border-radius:4px}
+.col:hover{background:var(--surface-2)}
+.col .v{font-size:11px;color:var(--ink-2);white-space:nowrap;margin-bottom:3px;font-variant-numeric:tabular-nums}
+.col .b{width:70%;max-width:46px;background:var(--bar);border-radius:4px 4px 0 0;min-height:2px}
+.col.sec .b{background:#eb6834}
+.cols-x{display:flex;gap:6px;padding:4px 4px 0}
+.cols-x span{flex:1;text-align:center;font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* rosca */
+.rosca{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}
+.rosca svg{width:150px;height:150px}
+.rosca circle.seg{cursor:pointer;transition:stroke-width .15s}
+.rosca circle.seg:hover{stroke-width:30}
+.rosca .centro{text-anchor:middle;font-size:10px;font-weight:700;fill:var(--ink)}
+.rosca .centro2{text-anchor:middle;font-size:7px;fill:var(--ink-3)}
+.legenda{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.legenda div{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;cursor:pointer;padding:2px 4px;border-radius:6px}
+.legenda div:hover{background:var(--surface-2)}
+.legenda i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.legenda .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legenda .v{font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+.legenda .v small{color:var(--ink-3)}
+.tip{position:fixed;z-index:50;background:#1a1a19;color:#fff;font-size:12px;padding:6px 9px;border-radius:6px;pointer-events:none;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+
+/* filtros */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:8px}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-2);min-width:150px;flex:1;max-width:260px}
+.filters label.grow{flex:2;min-width:220px;max-width:none}
+.filters .btn{min-height:38px}
+.combo{position:relative;display:block}
+.combo input{width:100%;padding-right:26px}
+.combo input.ativo{border-color:var(--accent-2);background:var(--accent-soft);font-weight:600}
+.combo .limpa{position:absolute;right:6px;bottom:8px;border:0;background:transparent;color:var(--ink-3);font-size:14px;padding:2px 4px;line-height:1}
+.combo .limpa:hover{color:var(--crit)}
+.combo .lista{position:absolute;z-index:30;left:0;right:0;top:100%;max-height:260px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);margin-top:2px;min-width:220px}
+.combo .lista div{padding:7px 10px;cursor:pointer;font-size:13px;color:var(--ink)}
+.combo .lista div:hover,.combo .lista div.sel{background:var(--accent-soft);color:var(--accent)}
+.combo .lista .vazio{color:var(--ink-3);cursor:default;font-size:12px}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 16px;color:var(--ink);font-weight:600;min-height:44px}
+.btn:hover{border-color:var(--accent-2);color:var(--accent)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn.primary:hover{background:var(--accent-2);color:#fff}
+.btn.ok{background:var(--verde);color:#fff;border-color:var(--verde)}
+.btn.ok:hover{background:#008f46;border-color:#008f46;color:#fff}
+.btn.sm{padding:5px 10px;font-size:12.5px;min-height:32px}
+.resumo{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:0 0 10px;color:var(--ink-2);font-size:13px}
+.resumo b{color:var(--ink);font-size:15px}
+
+/* tabelas */
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line-2)}
+th{background:var(--surface-2);font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-2);white-space:nowrap;position:sticky;top:0;cursor:pointer;user-select:none}
+th:hover{color:var(--accent)}
+th.sorted::after{content:" ▾";color:var(--accent)} th.sorted.asc::after{content:" ▴"}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:hover td{background:#f8f8f5}
+tr.total td{font-weight:700;background:var(--surface-2)}
+td .m{font-weight:600;color:var(--accent);cursor:pointer}
+td .m:hover{text-decoration:underline}
+td .f{cursor:pointer;border-bottom:1px dotted var(--ink-3)}
+td .f:hover{color:var(--accent);border-bottom-color:var(--accent)}
+td.acoes button{margin-right:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap;background:var(--neutral-bg);color:var(--ink-2);cursor:pointer}
+.badge.PAGA{background:var(--good-bg);color:#0a6b0a}
+.badge.ENTREGUE{background:#dcefe8;color:#0f6b4a}
+.badge.EMPENHADA{background:var(--warn-bg);color:var(--warn)}
+.badge.INDICADA,.badge.CADASTRADA{background:var(--accent-soft);color:var(--accent)}
+.badge.AGUARDANDO{background:var(--serious-bg);color:var(--serious)}
+.badge.EM{background:#f6e6f0;color:#8d2f63}
+.badge.CANCELADA{background:var(--crit-bg);color:var(--crit)}
+.badge.SIM{background:var(--good-bg);color:#0a6b0a}
+mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:center;padding:10px;color:var(--ink-2);font-size:13px}
+
+/* lista de municípios */
+.mun-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.mun{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow);cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.mun:hover{border-color:var(--accent-2);transform:translateY(-1px)}
+.mun .name{font-weight:700;font-size:15px;display:flex;justify-content:space-between;gap:6px;align-items:baseline}
+.mun .name .reg{font-size:11px;font-weight:600;color:var(--ink-3);text-transform:uppercase}
+.mun .row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink-2)}
+.mun .row b{color:var(--ink);font-variant-numeric:tabular-nums}
+.mun .mini{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.mun .mini i{display:block;height:100%;background:var(--bar)}
+
+/* ficha do município */
+.ficha-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ficha-top h1{margin:0}
+.ficha-top .sub{color:var(--ink-2);margin-top:2px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;font-size:13.5px}
+.kv dt{color:var(--ink-2);font-weight:600;white-space:nowrap}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.pessoa{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--line-2)}
+.pessoa:last-child{border-bottom:0}
+.pessoa .cargo{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-3);font-weight:600}
+.pessoa .nome{font-weight:600}
+.pessoa .det{font-size:12.5px;color:var(--ink-2);overflow-wrap:anywhere}
+.tel{display:inline-block;background:var(--surface-2);border-radius:6px;padding:1px 7px;font-size:12px;margin:1px 2px 1px 0;color:var(--ink);white-space:nowrap}
+.tel:hover{background:#d5e5f8;text-decoration:none}
+.texto{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5}
+.nota{font-size:12px;color:var(--ink-3);margin-top:6px}
+.ranking li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--line-2);font-size:13px}
+.ranking{list-style:none;margin:0;padding:0;counter-reset:r}
+.ranking li::before{counter-increment:r;content:counter(r) ".";color:var(--ink-3);width:22px;flex:none}
+.ranking li span:first-of-type{flex:1;cursor:pointer;color:var(--accent);font-weight:600}
+.ranking li span:last-child{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+
+/* resultado da busca */
+.res-grp{margin-bottom:14px}
+.res-grp h3{margin-top:6px}
+.res{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:13px;cursor:pointer}
+.res:hover{border-color:var(--accent-2)}
+.res .t{font-weight:600}
+.res .d{color:var(--ink-2);font-size:12.5px}
+
+/* login / telas cheias */
+.overlay-full{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.overlay-full.azul{background:linear-gradient(180deg,var(--azul-escuro),var(--azul));flex-direction:column;gap:18px}
+.overlay-full.azul .logo-login{height:96px;width:auto;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25))}
+.overlay-full.azul .rodape{margin-top:0}
+.overlay-full.azul .rodape .assinatura{color:var(--ouro-claro)}
+.auth-card{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);box-shadow:0 10px 34px rgba(0,0,0,.25);padding:28px 30px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px}
+.auth-card h1{font-size:20px;margin:0 0 2px;color:var(--texto)}
+.auth-card label{display:flex;flex-direction:column;gap:5px;font-size:14px;font-weight:600;color:var(--ink-2)}
+.auth-card button{width:100%;font-size:16px}
+.form-erro{background:var(--crit-bg);color:var(--crit);border-radius:8px;padding:9px 11px;font-size:13.5px}
+
+/* topo: usuário logado */
+.userbox{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;margin-left:auto}
+.userbox .userinfo{white-space:nowrap}
+.userbox .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff}
+.userbox .btn:hover{background:rgba(255,255,255,.22);color:#fff}
+
+/* toasts */
+.toasts{position:fixed;bottom:16px;right:16px;z-index:300;display:flex;flex-direction:column;gap:8px;max-width:320px}
+.toast{background:#1a1a19;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:1;transition:opacity .3s,transform .3s}
+.toast.erro{background:var(--crit)}
+.toast.saindo{opacity:0;transform:translateY(6px)}
+
+/* modal */
+.modal-backdrop{position:fixed;inset:0;z-index:200;background:rgba(10,10,10,.45);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 30px rgba(0,0,0,.3);padding:20px 22px;width:100%;max-width:580px;max-height:92vh;overflow:auto;position:relative}
+.modal-x{position:absolute;top:8px;right:8px;background:transparent;border:0;font-size:16px;color:var(--ink-3);padding:6px}
+.modal-x:hover{color:var(--crit)}
+.modal h2{margin-top:0}
+
+/* formulários */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 14px}
+.form-grid label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-2)}
+.form-grid label.grow{grid-column:1/-1}
+.form-grid textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+.form-grid h3{grid-column:1/-1;margin:8px 0 0}
+.form-acoes{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+.kv.confirm{background:var(--surface-2);border-radius:8px;padding:10px 14px}
+.carregando-inline{color:var(--ink-3);padding:20px 0}
+
+@media print{
+  header.top,.filters,.btn,.pager,.dica{display:none!important}
+  body{background:#fff} main{max-width:none;padding:0}
+  .card,.tbl-wrap,.tile{box-shadow:none;break-inside:avoid}
+  th{position:static}
+}
+@media (max-width:640px){
+  .bar{grid-template-columns:minmax(80px,45%) 1fr auto}
+  .kv{grid-template-columns:1fr} .kv dt{margin-top:6px}
+  .rosca{grid-template-columns:120px 1fr} .rosca svg{width:120px;height:120px}
+  .filters label{max-width:none}
+  nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+  nav.tabs button{flex:none;white-space:nowrap}
+}
+@media (max-width:480px){
+  .modal-backdrop{padding:0}
+  .modal{padding:16px;max-width:100%;width:100%;height:100%;max-height:100%;border-radius:0}
+  .auth-card{padding:22px 18px}
+  .overlay-full.azul .logo-login{height:72px}
+  .form-grid{grid-template-columns:1fr}
+  .form-acoes{flex-direction:column-reverse}
+  .form-acoes .btn{width:100%}
+  .userbox{flex-wrap:wrap;justify-content:flex-end}
+  .secao{flex-direction:column;align-items:stretch}
+  .secao .btn.primary,.secao .btn.ok{width:100%}
+  .tiles{grid-template-columns:repeat(2,1fr);gap:8px}
+  .tile .val{font-size:26px}
+  .grid{grid-template-columns:1fr}
+  .top .wrap{padding:8px 12px;gap:8px}
+  .brand{order:1;flex-basis:100%}
+  nav.tabs{order:2;flex-basis:100%}
+  .search{order:3;min-width:0;flex-basis:100%}
+  .userbox{order:4;flex-basis:100%;font-size:12.5px}
+  nav.tabs::-webkit-scrollbar{display:none}
+  nav.tabs{scrollbar-width:none}
+  table th:first-child,table td:first-child{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:2px 0 4px rgba(27,35,51,.08)}
+  table th:first-child{background:var(--surface-2);z-index:3}
+  .resumo{gap:8px 14px}
+}
+</style>
+</head>
+<body>
+<div id="toasts" class="toasts"></div>
+
+<div id="login-overlay" class="overlay-full azul hidden">
+  <img class="logo-marca logo-login" alt="Senador Vanderlan Cardoso">
+  <form id="form-login" class="auth-card">
+    <h1>Consulta Municípios GO</h1>
+    <p class="muted small">Fichas de atendimento · gabinete do Senador Vanderlan Cardoso</p>
+    <label>Acesso<input id="li-login" type="text" autocomplete="username" required></label>
+    <label>Senha<input id="li-senha" type="password" autocomplete="current-password" required></label>
+    <div id="li-erro" class="form-erro hidden"></div>
+    <button class="btn ok" type="submit">Entrar</button>
+  </form>
+  <div class="rodape"><span class="assinatura">by Raul Jardim</span></div>
+</div>
+
+<div id="troca-overlay" class="overlay-full azul hidden">
+  <img class="logo-marca logo-login" alt="Senador Vanderlan Cardoso">
+  <form id="form-troca-obrig" class="auth-card">
+    <h1>Crie sua nova senha</h1>
+    <p class="muted small">É o seu primeiro acesso (ou a senha foi redefinida). Escolha uma senha nova — não pode ser 12345.</p>
+    <label>Nova senha<input id="to-nova" type="password" required></label>
+    <label>Repetir nova senha<input id="to-nova2" type="password" required></label>
+    <div id="to-erro" class="form-erro hidden"></div>
+    <button class="btn ok" type="submit">Salvar e continuar</button>
+  </form>
+  <div class="rodape"><span class="assinatura">by Raul Jardim</span></div>
+</div>
+
+<div id="carregando" class="overlay-full hidden"><div class="auth-card" style="text-align:center">Carregando…</div></div>
+
+<header class="top"><div class="wrap">
+  <div class="brand"><img class="logo-marca" alt="Senador Vanderlan Cardoso"><div class="brand-txt"><b>Consulta Municípios GO</b><span>Fichas de atendimento · gabinete do Senador Vanderlan Cardoso</span></div></div>
+  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Buscar em tudo: município, pessoa, telefone, objeto da emenda, ofício…" autocomplete="off"></div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="painel" class="on">Painel</button>
+    <button data-tab="municipios">Municípios</button>
+    <button data-tab="emendas">Emendas</button>
+    <button data-tab="oficios">Ofícios</button>
+    <button data-tab="contatos">Contatos</button>
+    <button data-tab="usuarios" class="so-gestor hidden">Usuários</button>
+    <button data-tab="auditoria" class="so-gestor hidden">Histórico</button>
+  </nav>
+  <div class="userbox" id="userbox"></div>
+</div></header>
+<main id="app"></main>
+<footer class="rodape"><span class="assinatura">by Raul Jardim</span></footer>
+<div id="tip" class="tip hidden"></div>
+<datalist id="dl-municipios"></datalist>
+<datalist id="dl-ministerios"></datalist>
+
+<div id="modal-backdrop" class="modal-backdrop hidden"><div class="modal"><button type="button" class="modal-x" id="modal-fechar">✕</button><div id="modal-corpo"></div></div></div>
+
+<script>
+const SUPABASE_URL='https://ntmenpfbvliiutwsyydf.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50bWVucGZidmxpaXV0d3N5eWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzMxODAsImV4cCI6MjEwNDQwOTE4MH0.RwcdByP-b88ZuRCeIj0dC8f2kQP1V0adtPcMzi9pp74';
+const TOTAL_MUNICIPIOS_GO = 246;
+const LOGO_URI='data:image/png;base64,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';
+(function(){ document.querySelectorAll('.logo-marca').forEach(function(im){ im.src=LOGO_URI; }); })();
+</script>
+<script>
+// ---------- utilidades ----------
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const fmtBRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:2});
+const fmtInt = new Intl.NumberFormat('pt-BR');
+const brl = v => v==null ? '—' : fmtBRL.format(v);
+const brlCurto = v => { if(v==null) return '—'; const a=Math.abs(v); if(a>=1e9) return 'R$ '+(v/1e9).toLocaleString('pt-BR',{maximumFractionDigits:2})+' bi'; if(a>=1e6) return 'R$ '+(v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mi'; if(a>=1e3) return 'R$ '+(v/1e3).toLocaleString('pt-BR',{maximumFractionDigits:0})+' mil'; return fmtBRL.format(v); };
+const int = v => v==null ? '—' : fmtInt.format(v);
+const pct = (a,b) => b ? (a/b*100).toLocaleString('pt-BR',{maximumFractionDigits:0})+'%' : '—';
+const norm = s => (s==null?'':String(s)).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uniq = a => [...new Set(a.filter(x=>x!=null && x!==''))];
+const sum = (a,f) => a.reduce((s,x)=>s+((f?f(x):x)||0),0);
+const tituloCase = s => (s||'').toLowerCase().replace(/(^|\s|-|\()([a-zà-ú])/g,(m,p,c)=>p+c.toUpperCase()).replace(/\bDe\b/g,'de').replace(/\bDo\b/g,'do').replace(/\bDa\b/g,'da').replace(/\bDos\b/g,'dos').replace(/\bDas\b/g,'das');
+function hl(texto, q){ if(!q) return esc(texto); const t=esc(texto); const nq=norm(q); const nt=norm(t); let out='',i=0; while(true){ const k=nt.indexOf(nq,i); if(k<0){ out+=t.slice(i); break;} out+=t.slice(i,k)+'<mark>'+t.slice(k,k+nq.length)+'</mark>'; i=k+nq.length;} return out; }
+function telLinks(tels){ return (tels||[]).map(t=>{ const d=t.replace(/\D/g,''); const wa = d.length>=10 ? 'https://wa.me/55'+d : null; return wa ? `<a class="tel" href="${wa}" target="_blank" title="Abrir no WhatsApp">${esc(t)}</a>` : `<span class="tel">${esc(t)}</span>`; }).join(''); }
+const PHONE_RE = /\(?\d{2}\)?\s?\d\.?\d{3,4}[\s\-]?\d{4}/g;
+function textoComTel(s){ return esc(s||'').replace(PHONE_RE, m=>{ const d=m.replace(/\D/g,''); return `<a class="tel" href="https://wa.me/55${d}" target="_blank" title="Abrir no WhatsApp">${m}</a>`; }); }
+const PALETA = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948','#8a8984'];
+const COR_SIT = {'PAGA':'#008300','ENTREGUE':'#1baf7a','EMPENHADA':'#eda100','INDICADA':'#2a78d6','CADASTRADA':'#4a3aa7','AGUARDANDO ENTREGA':'#eb6834','EM EXECUÇÃO':'#e87ba4','CANCELADA':'#e34948','OUTRA':'#8a8984','NÃO INFORMADA':'#b5b4ae','SIM':'#008300','NÃO':'#c9c8c2'};
+
+// ---------- grupo de situação (espelha grupo_situacao do banco/extrator) ----------
+function grupoSituacao(s){
+  const n = norm(s);
+  if(!n) return 'NÃO INFORMADA';
+  if(/CANCEL|ANULADO|IMPRODUTIVO|NAO CONTRATADA/.test(n)) return 'CANCELADA';
+  if(/EXECUCAO|EM OBRA|EM ANDAMENTO/.test(n)) return 'EM EXECUÇÃO';
+  if(/LICITAD|AGUARDANDO ENTREG|AGUARDANDO A ENTREG|AGUARDANDO A CHEGADA/.test(n)) return 'AGUARDANDO ENTREGA';
+  if(/ENTREGUE|EMTREGUE|EXECUTADA|FINALIZADA|INSTALADO|PERFURADO/.test(n)) return 'ENTREGUE';
+  if(n.startsWith('PAGA') || /PAGA|PAGO|LIBERADO/.test(n)) return 'PAGA';
+  if(/RETIRADO|PATIO/.test(n)) return 'AGUARDANDO ENTREGA';
+  if(/EMPENH/.test(n)) return 'EMPENHADA';
+  if(/INDICA|COMPROMISSO/.test(n)) return 'INDICADA';
+  if(/CADASTR/.test(n)) return 'CADASTRADA';
+  return 'OUTRA';
+}
+
+// ---------- RPC (fetch puro, sem bibliotecas) ----------
+class RpcError extends Error{ constructor(codigo, texto){ super(texto); this.codigo=codigo; this.texto=texto; } }
+async function rpc(fn, args={}){
+  let r;
+  try{
+    r = await fetch(SUPABASE_URL+'/rest/v1/rpc/'+fn, {
+      method:'POST',
+      headers:{apikey:SUPABASE_KEY, Authorization:'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json'},
+      body: JSON.stringify(args)
+    });
+  }catch(e){ throw new RpcError('SEM_CONEXAO','Não foi possível falar com o servidor. Confira sua internet.'); }
+  let j=null; try{ j = await r.json(); }catch(e){}
+  if(!r.ok){
+    const raw = (j && j.message) || (j && j.error_description) || 'Erro desconhecido do servidor.';
+    const i = String(raw).indexOf(': ');
+    const codigo = i>=0 ? raw.slice(0,i) : '';
+    const texto = i>=0 ? raw.slice(i+2) : raw;
+    if(codigo==='SESSAO_INVALIDA'){ localStorage.removeItem('cmgo_token'); SESSAO=null; mostrarLogin(texto); }
+    throw new RpcError(codigo, texto);
+  }
+  return j;
+}
+
+// ---------- sessão ----------
+let SESSAO = null; // {token, usuario:{id,login,nome,papel,precisa_trocar}}
+function souGestor(){ return !!(SESSAO && SESSAO.usuario.papel==='gestor'); }
+function pode(acao){
+  if(!SESSAO) return false;
+  const papel = SESSAO.usuario.papel;
+  if(papel==='gestor') return true;
+  if(papel==='inseridor') return acao==='inserir_emenda' || acao==='inserir_oficio';
+  return false;
+}
+function rotuloPapel(p){ return {gestor:'Responsável',inseridor:'Quem insere dados',consulta:'Quem só consulta'}[p] || p; }
+
+// ---------- dados (carregados via carregar_dados; recalculados a cada mudança) ----------
+let DADOS=[], MUNS=[], EMENDAS=[], OFICIOS=[], byName={}, CONTATOS=[];
+let OPCOES = {municipio:[],ministerio:[],ano:[],situacao:[],regiao:[],atendido:['SIM','NÃO'],partido:[],psd:['TEM','NÃO TEM'],cargo:[]};
+let SETS = {};
+function recalcular(){
+  DADOS.forEach(m=>{
+    m.emendas = m.emendas||[];
+    m.oficios = m.oficios||[];
+    m.emendas.forEach(e=>{ e.municipio=m.municipio; e.regiao=m.regiao||'(sem região)'; e.ano=String(e.ano||'?'); if(!e.situacao_grupo) e.situacao_grupo=grupoSituacao(e.situacao); });
+    m.oficios.forEach(o=>{ o.municipio=m.municipio; o.regiao=m.regiao||'(sem região)'; o.ano=String(o.ano||'?'); o.atendido_flag = (o.atendido||'').trim()? 'SIM':'NÃO'; });
+    m.emendas_total = sum(m.emendas, e=>e.valor);
+    m.emendas_qtd = m.emendas.length;
+    m.oficios_qtd = m.oficios.length;
+    m.oficios_valor_total = sum(m.oficios, o=>o.valor_solicitado);
+    m.oficios_atendidos = m.oficios.filter(o=>o.atendido_flag==='SIM').length;
+    m.prefeito_partido = (m.prefeito||{}).partido || '';
+    const p = m.prefeito||{};
+    m._busca = norm([m.municipio,m.regiao,p.texto,(m.vice_prefeito||{}).texto,(m.presidente_camara||{}).texto,m.primeira_dama,m.secretario_saude,m.psd_presidente,m.vereadores_psd,m.companheiros,m.dep_federal,m.dep_estadual,m.eleicao_2020,m.eleicao_2024,(m.observacoes||[]).join(' ')].join(' | '));
+  });
+  MUNS = DADOS.filter(m=>m.tipo!=='nacional');
+  EMENDAS = DADOS.flatMap(m=>m.emendas);
+  OFICIOS = DADOS.flatMap(m=>m.oficios);
+  byName = Object.fromEntries(DADOS.map(m=>[m.municipio,m]));
+  const contatos = [];
+  DADOS.forEach(m=>{
+    const add=(cargo,p)=>{ if(!p) return; if(typeof p==='string'){ const nome=p.split(/\(|\/\/|–| - |\s\/\s/)[0].replace(/\b\d{1,2}\/\d{2}\b/g,'').replace(/[\d\-\s]+$/,'').trim(); contatos.push({municipio:m.municipio,cargo,nome,partido:'',telefones:(p.match(PHONE_RE)||[]),texto:p}); } else { contatos.push({municipio:m.municipio,cargo,nome:p.nome||'',partido:p.partido||'',telefones:p.telefones||[],email:p.email||'',texto:p.texto||''}); } };
+    add((m.prefeito||{}).cargo||'Prefeito(a)', m.prefeito);
+    add('Vice-prefeito(a)', m.vice_prefeito);
+    add('Presidente da Câmara', m.presidente_camara);
+    if(m.primeira_dama) add('Primeira-dama / cônjuge', m.primeira_dama);
+    if(m.secretario_saude) add('Secretário(a) de Saúde', m.secretario_saude);
+    if(m.psd_presidente) add('Presidente do PSD', m.psd_presidente);
+    if(m.vereadores_psd) m.vereadores_psd.split(/\s*\/\/\s*|\s+\/\s+/).forEach(v=>add('Vereador(a) PSD', v));
+    if(m.companheiros) m.companheiros.split(/\s*\/\/\s*|\s+\/\s+/).forEach(v=>{ if(v.trim()) add('Companheiro(a)', v.trim()); });
+    if(m.dep_federal) add('Dep. federal parceiro', m.dep_federal);
+    if(m.dep_estadual) add('Dep. estadual parceiro', m.dep_estadual);
+  });
+  contatos.forEach(c=>c._busca=norm([c.municipio,c.cargo,c.nome,c.partido,c.texto,(c.telefones||[]).join(' ')].join(' | ')));
+  CONTATOS = contatos;
+  OPCOES = {
+    municipio: DADOS.map(m=>m.municipio),
+    ministerio: uniq([...EMENDAS.map(e=>e.ministerio),...OFICIOS.map(o=>o.ministerio)]).sort(),
+    ano: uniq([...EMENDAS.map(e=>e.ano),...OFICIOS.map(o=>o.ano)]).sort(),
+    situacao: uniq(EMENDAS.map(e=>e.situacao_grupo)).sort(),
+    regiao: uniq(DADOS.map(m=>m.regiao)).sort(),
+    atendido: ['SIM','NÃO'],
+    partido: uniq(DADOS.map(m=>m.prefeito_partido)).sort(),
+    psd: ['TEM','NÃO TEM'],
+    cargo: uniq(CONTATOS.map(c=>c.cargo)),
+  };
+  SETS = Object.fromEntries(Object.entries(OPCOES).map(([k,v])=>[k,new Set(v.map(norm))]));
+  atualizarDatalists();
+}
+function atualizarDatalists(){
+  const dm=$('#dl-municipios'), di=$('#dl-ministerios');
+  if(dm) dm.innerHTML = DADOS.map(m=>`<option value="${esc(tituloCase(m.municipio))}">`).join('');
+  if(di) di.innerHTML = OPCOES.ministerio.map(x=>`<option value="${esc(x)}">`).join('');
+}
+function acharMunicipioPorNome(nome){ const n=norm(nome); return DADOS.find(m=>norm(m.municipio)===n); }
+function acharEmendaPorId(id){ for(const m of DADOS){ const e=(m.emendas||[]).find(x=>x.id===id); if(e) return {municipio:m, emenda:e}; } return null; }
+function acharOficioPorId(id){ for(const m of DADOS){ const o=(m.oficios||[]).find(x=>x.id===id); if(o) return {municipio:m, oficio:o}; } return null; }
+// "casa": filtro exato quando o texto é uma opção da lista; senão, "contém" (digitou "goian" -> todos com goian)
+function casa(filtro, valor, chave){ if(!filtro) return true; const nf=norm(filtro).trim(); if(!nf) return true; const nv=norm(valor); if(nv===nf) return true; if(chave && SETS[chave] && SETS[chave].has(nf)) return false; return nv.includes(nf); }
+
+// ---------- toasts ----------
+function toast(msg, tipo='ok'){
+  const box=$('#toasts'); if(!box) return;
+  const el=document.createElement('div'); el.className='toast '+(tipo==='erro'?'erro':'ok'); el.textContent=msg;
+  box.appendChild(el);
+  setTimeout(()=>{ el.classList.add('saindo'); setTimeout(()=>el.remove(),300); }, 3800);
+}
+
+// ---------- modal genérico ----------
+function abrirModal(corpoHtml){ $('#modal-corpo').innerHTML = corpoHtml; $('#modal-backdrop').classList.remove('hidden'); }
+function fecharModal(){ $('#modal-backdrop').classList.add('hidden'); $('#modal-corpo').innerHTML=''; }
+$('#modal-fechar').addEventListener('click', fecharModal);
+$('#modal-backdrop').addEventListener('click', e=>{ if(e.target.id==='modal-backdrop') fecharModal(); });
+function confirmarAcao(msg, onConfirm, opts={}){
+  const titulo=opts.titulo||'Confirmar', label=opts.label||'Confirmar', perigo=opts.perigo!==false;
+  const corpo=`<h2>${esc(titulo)}</h2><p>${esc(msg)}</p><div class="form-acoes"><button type="button" class="btn" id="ca-cancelar">Cancelar</button><button type="button" class="btn primary" id="ca-confirmar" ${perigo?'style="background:var(--crit);border-color:var(--crit)"':''}>${esc(label)}</button></div>`;
+  abrirModal(corpo);
+  $('#ca-cancelar').addEventListener('click', fecharModal);
+  $('#ca-confirmar').addEventListener('click', onConfirm);
+}
+function mostrarErroForm(id, msg){ const el=$('#'+id); if(!el) return; el.textContent=msg; el.classList.remove('hidden'); }
+
+// ---------- estado: UM filtro global, válido em todas as abas ----------
+const DIMS = {municipio:'Município', regiao:'Região', ministerio:'Ministério', ano:'Ano', situacao:'Situação', atendido:'Ofício atendido', partido:'Partido do prefeito', psd:'Vereador PSD', cargo:'Cargo'};
+const filtroVazio = () => Object.fromEntries(Object.keys(DIMS).map(k=>[k,'']));
+const estado = { tab:'painel', q:'', mun:null,
+  f: filtroVazio(), ordem: [],              // filtro global + ordem em que foi montado (trilha)
+  loc: { emendas:{q:'',sort:'valor',dir:-1,page:0}, oficios:{q:'',sort:'ano',dir:-1,page:0}, municipios:{q:'',sort:'emendas_total',dir:-1}, contatos:{q:''} } };
+const PAGE=100;
+function setFiltro(k,v){ estado.f[k]=v||''; estado.ordem=estado.ordem.filter(x=>x!==k); if(v) estado.ordem.push(k); Object.values(estado.loc).forEach(l=>{ if('page' in l) l.page=0; }); }
+function limparFiltros(){ estado.f=filtroVazio(); estado.ordem=[]; }
+
+// ---------- navegação ----------
+function go(tab){ estado.tab=tab; estado.mun=null; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); render(); window.scrollTo(0,0); if(window.innerWidth<640){ const ab=$('#tabs button.on'); if(ab) ab.scrollIntoView({inline:'center',block:'nearest'}); } }
+$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ estado.q=''; $('#busca').value=''; go(b.dataset.tab);} });
+let tBusca; $('#busca').addEventListener('input', e=>{ clearTimeout(tBusca); tBusca=setTimeout(()=>{ estado.q=e.target.value.trim(); estado.mun=null; estado.tab = estado.q ? 'busca':'painel'; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===estado.tab)); render(); },180); });
+function abrirMunicipio(nome){ estado.mun=nome; render(); window.scrollTo(0,0); }
+document.addEventListener('click', e=>{
+  const a=e.target.closest('[data-mun]'); if(a){ e.preventDefault(); abrirMunicipio(a.dataset.mun); return; }
+  const fi=e.target.closest('[data-filtro]'); if(fi){ e.preventDefault(); const [k,v]=JSON.parse(fi.dataset.filtro); setFiltro(k,v); go(fi.dataset.aba || ((estado.tab==='busca'||estado.mun) ? 'painel' : estado.tab)); return; }
+  const rm=e.target.closest('[data-rem]'); if(rm){ e.preventDefault(); e.stopPropagation(); setFiltro(rm.dataset.rem,''); render(); return; }
+  const raiz=e.target.closest('[data-raiz]'); if(raiz){ e.preventDefault(); limparFiltros(); go('painel'); return; }
+  const t=e.target.closest('[data-go]'); if(t){ e.preventDefault(); const p=JSON.parse(t.dataset.go); if(p.filtros){ limparFiltros(); Object.entries(p.filtros).forEach(([k,v])=>setFiltro(k,v)); } go(p.tab); return; }
+  // ---- ações de dados (perfis inseridor/gestor) ----
+  const einE=e.target.closest('[data-inserir-emenda]'); if(einE){ e.preventDefault(); if(!pode('inserir_emenda')){ toast('Seu perfil não pode inserir emendas.','erro'); return; } abrirFormEmenda(einE.dataset.inserirEmenda||null); return; }
+  const einO=e.target.closest('[data-inserir-oficio]'); if(einO){ e.preventDefault(); if(!pode('inserir_oficio')){ toast('Seu perfil não pode inserir ofícios.','erro'); return; } abrirFormOficio(einO.dataset.inserirOficio||null); return; }
+  const eE=e.target.closest('[data-editar-emenda]'); if(eE){ e.preventDefault(); abrirFormEmenda(null, Number(eE.dataset.editarEmenda)); return; }
+  const xE=e.target.closest('[data-excluir-emenda]'); if(xE){ e.preventDefault(); excluirEmenda(Number(xE.dataset.excluirEmenda)); return; }
+  const eO=e.target.closest('[data-editar-oficio]'); if(eO){ e.preventDefault(); abrirFormOficio(null, Number(eO.dataset.editarOficio)); return; }
+  const xO=e.target.closest('[data-excluir-oficio]'); if(xO){ e.preventDefault(); excluirOficio(Number(xO.dataset.excluirOficio)); return; }
+  const emun=e.target.closest('[data-editar-municipio]'); if(emun){ e.preventDefault(); abrirFormMunicipio(emun.dataset.editarMunicipio); return; }
+  const nmun=e.target.closest('[data-novo-municipio]'); if(nmun){ e.preventDefault(); abrirFormMunicipio(null); return; }
+  const xmun=e.target.closest('[data-excluir-municipio]'); if(xmun){ e.preventDefault(); excluirMunicipio(xmun.dataset.excluirMunicipio); return; }
+  const nuser=e.target.closest('[data-novo-usuario]'); if(nuser){ e.preventDefault(); abrirFormUsuario(); return; }
+  const rsen=e.target.closest('[data-redefinir-senha]'); if(rsen){ e.preventDefault(); redefinirSenha(Number(rsen.dataset.redefinirSenha)); return; }
+  const ausr=e.target.closest('[data-alterar-usuario]'); if(ausr){ e.preventDefault(); abrirFormAlterarUsuario(Number(ausr.dataset.alterarUsuario)); return; }
+  const tusr=e.target.closest('[data-ativar-usuario]'); if(tusr){ e.preventDefault(); alternarAtivoUsuario(Number(tusr.dataset.ativarUsuario)); return; }
+  const rusr=e.target.closest('[data-remover-usuario]'); if(rusr){ e.preventDefault(); removerUsuario(Number(rusr.dataset.removerUsuario)); return; }
+});
+// tooltip
+const tip=$('#tip');
+document.addEventListener('mouseover', e=>{ const t=e.target.closest('[data-tip]'); if(!t){ tip.classList.add('hidden'); return;} tip.innerHTML=t.dataset.tip; tip.classList.remove('hidden'); });
+document.addEventListener('mousemove', e=>{ if(tip.classList.contains('hidden')) return; const x=Math.min(e.clientX+14, innerWidth-tip.offsetWidth-8); const y=Math.min(e.clientY+16, innerHeight-tip.offsetHeight-8); tip.style.left=x+'px'; tip.style.top=y+'px'; });
+
+// ---------- filtros aplicados aos dados ----------
+const F = () => estado.f;
+function munOk(m, f){ // atributos do município
+  return casa(f.municipio,m.municipio,'municipio')&&casa(f.regiao,m.regiao,'regiao')&&casa(f.partido,m.prefeito_partido,'partido')&&(!f.psd||(norm(f.psd)==='TEM'?m.psd_representantes>0:!(m.psd_representantes>0)));
+}
+function filtraEmendas(f=F(), q=''){ const nq=norm(q); return EMENDAS.filter(e=>munOk(byName[e.municipio],f)&&casa(f.ministerio,e.ministerio,'ministerio')&&casa(f.ano,e.ano,'ano')&&casa(f.situacao,e.situacao_grupo,'situacao')&&(!nq||norm(e.objeto+' '+e.situacao+' '+e.municipio).includes(nq))); }
+function filtraOficios(f=F(), q=''){ const nq=norm(q); return OFICIOS.filter(x=>munOk(byName[x.municipio],f)&&casa(f.ministerio,x.ministerio,'ministerio')&&casa(f.ano,x.ano,'ano')&&casa(f.atendido,x.atendido_flag,'atendido')&&(!nq||norm([x.objeto,x.solicitante,x.recebido,x.municipio].join(' ')).includes(nq))); }
+function filtraMunicipios(f=F()){ // municípios do recorte: atributos + (se houver filtro de emenda/ofício) ter registro que casa
+  const temRec = f.ministerio||f.ano||f.situacao||f.atendido;
+  if(!temRec) return DADOS.filter(m=>munOk(m,f));
+  const s=new Set([...filtraEmendas(f).map(e=>e.municipio),...filtraOficios(f).map(o=>o.municipio)]);
+  return DADOS.filter(m=>s.has(m.municipio));
+}
+const temFiltro = () => estado.ordem.length>0;
+const rotFiltro=(k,v)=>k==='municipio'?tituloCase(v):(k==='atendido'?(v==='SIM'?'Sim':'Não'):v);
+
+// ---------- componentes ----------
+function aviso(){ const n=MUNS.length; return n<TOTAL_MUNICIPIOS_GO ? `<div class="aviso">Base atual: <b>${n} de ${TOTAL_MUNICIPIOS_GO}</b> municípios de Goiás.</div>` : ``; }
+const fAttr = (k,v,aba) => `data-filtro='${esc(JSON.stringify([k,v]))}'${aba?` data-aba="${aba}"`:''}`;
+function agrupar(arr, key, val){ const m={}; arr.forEach(x=>{ const k=(typeof key==='function'?key(x):x[key]); if(k==null||k==='') return; m[k]=(m[k]||0)+(val?(val(x)||0):1); }); return Object.entries(m).map(([n,v])=>({n,v})).sort((a,b)=>b.v-a.v); }
+function contar(arr, key){ const m={}; arr.forEach(x=>{ const k=x[key]; m[k]=(m[k]||0)+1; }); return m; }
+function combo(id, opcoesChave, todos='Todos'){ const valor=estado.f[id]||''; return `<label>${DIMS[id]}<span class="combo"><input data-f="${id}" data-opcoes="${opcoesChave||id}" class="${valor?'ativo':''}" value="${esc(valor)}" placeholder="${todos} — digite p/ filtrar" autocomplete="off" spellcheck="false"><button type="button" class="limpa" title="Limpar" ${valor?'':'style="display:none"'}>✕</button><div class="lista hidden"></div></span></label>`; }
+
+// barra global: trilha (migalhas) + campos digitáveis. Aparece em todas as abas.
+function barraFiltros(camposExtras=''){
+  const f=estado.f, ordem=estado.ordem;
+  const trilha=`<div class="trilha"><span class="lbl">Filtro ativo</span><span class="mig raiz" data-raiz title="Tirar todos os filtros e voltar ao painel geral">Painel geral</span>${ordem.map(k=>`<span class="sep">›</span><span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,f[k]))}<span class="x">✕</span></span>`).join('')}${!ordem.length?'<span class="muted small" style="margin-left:6px">nenhum — clique em qualquer barra, fatia, número ou nome para filtrar; o filtro vale em todas as abas</span>':''}</div>`;
+  const camposInt=`<div class="filters">${combo('municipio')}${combo('regiao',null,'Todas')}${combo('ministerio')}${combo('ano')}${combo('situacao',null,'Todas')}${combo('atendido',null,'Tanto faz')}${combo('partido')}${combo('psd',null,'Tanto faz')}${camposExtras}${ordem.length?'<button class="btn" data-raiz>Limpar tudo</button>':''}</div>`;
+  const abertoPorPadrao = window.innerWidth >= 760 || ordem.length>0;
+  const campos=`<details class="filtros-det"${abertoPorPadrao?' open':''}><summary>Filtros <span class="seta">▾</span></summary>${camposInt}</details>`;
+  return `<div class="fbar">${trilha}${campos}</div>`;
+}
+function ligarCombos(el, cb){
+  $$('.combo', el).forEach(c=>{
+    const inp=$('input',c), lista=$('.lista',c), limpa=$('.limpa',c); const opcoes=OPCOES[inp.dataset.opcoes]||[]; const id=inp.dataset.f; let sel=-1, tmr;
+    const rot = v => id==='municipio' ? tituloCase(v) : v;
+    const mostrar=()=>{ const q=norm(inp.value).trim(); const hits=(q?opcoes.filter(o=>norm(o).includes(q)):opcoes).slice(0,80); sel=-1;
+      lista.innerHTML = hits.length ? hits.map(o=>`<div data-v="${esc(o)}">${hl(rot(o),inp.value)}</div>`).join('') : `<div class="vazio">nenhuma opção com “${esc(inp.value)}” — o filtro usa o texto digitado (contém)</div>`;
+      lista.classList.remove('hidden'); };
+    const aplicar=v=>{ clearTimeout(tmr); inp.value=v; setFiltro(id,v); lista.classList.add('hidden'); cb(false); };
+    inp.addEventListener('focus', mostrar);
+    inp.addEventListener('input', ()=>{ mostrar(); limpa.style.display=inp.value?'':'none'; clearTimeout(tmr); tmr=setTimeout(()=>{ setFiltro(id,inp.value); cb(true); },300); });
+    inp.addEventListener('keydown', e=>{ const its=$$('div[data-v]',lista); if(e.key==='ArrowDown'){ sel=Math.min(sel+1,its.length-1); its.forEach((d,i)=>d.classList.toggle('sel',i===sel)); its[sel]&&its[sel].scrollIntoView({block:'nearest'}); e.preventDefault(); }
+      else if(e.key==='ArrowUp'){ sel=Math.max(sel-1,0); its.forEach((d,i)=>d.classList.toggle('sel',i===sel)); e.preventDefault(); }
+      else if(e.key==='Enter'){ e.preventDefault(); if(sel>=0&&its[sel]) aplicar(its[sel].dataset.v); else if(its.length===1) aplicar(its[0].dataset.v); else aplicar(inp.value); }
+      else if(e.key==='Escape'){ lista.classList.add('hidden'); } });
+    lista.addEventListener('mousedown', e=>{ const d=e.target.closest('div[data-v]'); if(d){ e.preventDefault(); aplicar(d.dataset.v);} });
+    inp.addEventListener('blur', ()=>setTimeout(()=>lista.classList.add('hidden'),150));
+    limpa.addEventListener('click', ()=>aplicar(''));
+  });
+}
+function ligarLocais(el, l, cb){ // campos locais da aba (busca por texto, ordenação, paginação)
+  $$('[data-l]', el).forEach(i=>i.addEventListener(i.tagName==='SELECT'?'change':'input', e=>{ l[i.dataset.l]=e.target.value; if('page' in l) l.page=0; cb(true); }));
+  $$('[data-sort]', el).forEach(t=>t.addEventListener('click', ()=>{ const k=t.dataset.sort; if(l.sort===k) l.dir=-l.dir; else { l.sort=k; l.dir = (k==='valor'||k==='valor_solicitado'||k==='ano')?-1:1; } cb(); }));
+  $$('[data-pg]', el).forEach(b=>b.addEventListener('click', ()=>{ l.page+=Number(b.dataset.pg); cb(); }));
+}
+function manterFoco(el){ const a=document.activeElement; const key=a&&a.dataset?(a.dataset.f?`[data-f="${a.dataset.f}"]`:(a.dataset.l?`[data-l="${a.dataset.l}"]`:null)):null; if(!key) return; const i=$(key, el); if(i){ i.focus({preventScroll:true}); try{ i.setSelectionRange(i.value.length,i.value.length);}catch(e){} } }
+function ligarTudo(el, l, rerender){ const cb=(digitando)=>{ rerender(); if(digitando) manterFoco($('#app')); }; ligarCombos(el, cb); if(l) ligarLocais(el, l, cb); }
+
+// gráficos ------------------------------------------------------------
+// barras horizontais — items: [{n, v, q, tip}] ; opts: {fmt, dim, limite, rotulo, mun, sec, mostrarQ, aba}
+function barras(items, opts={}){
+  const max=Math.max(...items.map(i=>i.v),1); const f=opts.fmt||brlCurto; const lim=opts.limite||items.length; const vis=items.slice(0,lim);
+  const linha=i=>`<div class="bar ${opts.sec?'sec':''}" data-tip="${esc(i.tip||(i.n+': '+f(i.v)+(i.q!=null?' · '+int(i.q)+' registro(s)':'')))}" ${opts.dim?fAttr(opts.dim,i.n,opts.aba):(i.go?`data-go='${esc(JSON.stringify(i.go))}'`:'')} ${opts.mun?`data-mun="${esc(i.n)}"`:''}><span class="n">${esc(opts.rotulo?opts.rotulo(i.n):i.n)}</span><span class="t"><i style="width:${(i.v/max*100).toFixed(1)}%"></i></span><span class="v">${f(i.v)}${i.q!=null&&opts.mostrarQ?` <small>(${int(i.q)})</small>`:''}</span></div>`;
+  return `<div class="bars">${vis.map(linha).join('')}</div>${items.length>lim?`<details class="mais"><summary>ver todos os ${items.length}</summary><div class="bars" style="margin-top:6px">${items.slice(lim).map(linha).join('')}</div></details>`:''}`;
+}
+function colunas(items, opts={}){
+  const max=Math.max(...items.map(i=>i.v),1); const f=opts.fmt||brlCurto; const denso=items.length>=8;
+  return `<div class="cols ${denso?'denso':''}">${items.map(i=>`<div class="col ${opts.sec?'sec':''}" data-tip="${esc(i.tip||(i.n+': '+f(i.v)+(i.q!=null?' · '+int(i.q)+' registro(s)':'')))}" ${opts.dim?fAttr(opts.dim,i.n,opts.aba):''}>${denso?'':`<span class="v">${f(i.v)}</span>`}<span class="b" style="height:${Math.max(1,i.v/max*100).toFixed(1)}%"></span></div>`).join('')}</div><div class="cols-x">${items.map(i=>`<span title="${esc(i.n)}">${esc(i.n)}</span>`).join('')}</div>${denso?'<div class="nota">Passe o mouse em cada coluna para ver o valor.</div>':''}`;
+}
+function rosca(items, opts={}){
+  const total=sum(items,i=>i.v)||1; const f=opts.fmt||brlCurto; const r=42, C=2*Math.PI*r; let off=0;
+  const cor=(n,i)=>opts.cores&&opts.cores[n]||PALETA[i%PALETA.length];
+  const segs=items.map((i,k)=>{ const len=i.v/total*C; const s=`<circle class="seg" cx="60" cy="60" r="${r}" fill="none" stroke="${cor(i.n,k)}" stroke-width="22" stroke-dasharray="${Math.max(0,len-1.5)} ${C-Math.max(0,len-1.5)}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)" data-tip="${esc(i.n+': '+f(i.v)+' ('+pct(i.v,total)+')')}" ${opts.dim?fAttr(opts.dim,i.n,opts.aba):''}></circle>`; off+=len; return s; }).join('');
+  return `<div class="rosca"><svg viewBox="0 0 120 120">${segs}<text class="centro" x="60" y="58">${esc(opts.centro||f(total))}</text><text class="centro2" x="60" y="72">${esc(opts.centro2||'total')}</text></svg>
+  <div class="legenda">${items.map((i,k)=>`<div ${opts.dim?fAttr(opts.dim,i.n,opts.aba):''} data-tip="${esc(i.n+': '+f(i.v)+' ('+pct(i.v,total)+')'+(i.q!=null?' · '+int(i.q)+' registro(s)':''))}"><i style="background:${cor(i.n,k)}"></i><span class="n">${esc(i.n)}</span><span class="v">${f(i.v)} <small>${pct(i.v,total)}</small></span></div>`).join('')}</div></div>`;
+}
+function badge(s, link=true){ const g=(s||'').split(' ')[0]; return `<span class="badge ${esc(g)}" title="${esc(s)}" ${link?fAttr('situacao',s):''}>${esc(s)}</span>`; }
+function th(label, key, l, cls=''){ return `<th class="${cls} ${l.sort===key?'sorted':''} ${l.dir>0?'asc':''}" data-sort="${key}">${label}</th>`; }
+function ordenar(arr, key, dir){ return [...arr].sort((a,b)=>{ let x=a[key], y=b[key]; if(x==null) return 1; if(y==null) return -1; if(typeof x==='number'&&typeof y==='number') return (x-y)*dir; return String(x).localeCompare(String(y),'pt-BR')*dir; }); }
+function csv(rows, cols, nome){ const linhas=[cols.map(c=>c.label).join(';')].concat(rows.map(r=>cols.map(c=>{ let v=c.get?c.get(r):r[c.key]; if(v==null) v=''; if(typeof v==='number') v=String(v).replace('.',','); return '"'+String(v).replace(/"/g,'""')+'"'; }).join(';'))); const blob=new Blob(['﻿'+linhas.join('\r\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nome; a.click(); }
+function pager(l, total){ const pages=Math.ceil(total/PAGE); if(pages<=1) return ''; return `<div class="pager"><button class="btn sm" data-pg="-1" ${l.page<=0?'disabled':''}>‹ Anterior</button> página ${l.page+1} de ${pages} <button class="btn sm" data-pg="1" ${l.page>=pages-1?'disabled':''}>Próxima ›</button></div>`; }
+const COLS_E=[{label:'Município',key:'municipio'},{label:'Região',key:'regiao'},{label:'Ministério',key:'ministerio'},{label:'Ano',key:'ano'},{label:'Objeto',key:'objeto'},{label:'Valor',key:'valor'},{label:'Situação',key:'situacao'},{label:'Situação (grupo)',key:'situacao_grupo'}];
+const COLS_O=[{label:'Município',key:'municipio'},{label:'Região',key:'regiao'},{label:'Ministério',key:'ministerio'},{label:'Ano',key:'ano'},{label:'Pedido',key:'objeto'},{label:'Valor solicitado',key:'valor_solicitado'},{label:'Como chegou',key:'recebido'},{label:'Data',key:'data_recebido'},{label:'Solicitante',key:'solicitante'},{label:'Atendido',key:'atendido'}];
+const fl=(dim,v,rot)=>`<span class="f" ${fAttr(dim,v)} title="Filtrar por ${DIMS[dim]}: ${esc(v)}">${esc(rot||v)}</span>`;
+function tabelaEmendas(rows, o={}){ const l=o.l||{sort:'',dir:1}; const acoes=!!o.acoes; return `<div class="tbl-wrap"><table><thead><tr>${o.semMunicipio?'':th('Município','municipio',l)}${th('Ministério','ministerio',l)}${th('Ano','ano',l)}${th('Objeto','objeto',l)}${th('Valor','valor',l,'num')}${th('Situação','situacao_grupo',l)}${acoes?'<th></th>':''}</tr></thead><tbody>
+  ${rows.map(e=>`<tr>${o.semMunicipio?'':`<td><span class="m" data-mun="${esc(e.municipio)}">${esc(tituloCase(e.municipio))}</span></td>`}<td>${fl('ministerio',e.ministerio)}</td><td>${fl('ano',e.ano)}</td><td>${o.q?hl(e.objeto,o.q):esc(e.objeto)}</td><td class="num">${brl(e.valor)}</td><td>${badge(e.situacao_grupo)}${e.situacao&&e.situacao!==e.situacao_grupo?`<div class="small muted">${esc(e.situacao)}</div>`:''}</td>${acoes?`<td class="small acoes"><button type="button" class="btn sm" data-editar-emenda="${e.id}">✎ Editar</button><button type="button" class="btn sm" data-excluir-emenda="${e.id}">🗑 Excluir</button></td>`:''}</tr>`).join('')}
+  ${rows.length?`<tr class="total"><td colspan="${o.semMunicipio?3:4}">Total (${int(rows.length)} emendas)</td><td class="num">${brl(sum(rows,e=>e.valor))}</td><td colspan="${acoes?2:1}"></td></tr>`:`<tr><td colspan="${6+(acoes?1:0)}" class="muted">Nenhuma emenda encontrada.</td></tr>`}</tbody></table></div>`; }
+function tabelaOficios(rows,o={}){ const l=o.l||{sort:'',dir:1}; const acoes=!!o.acoes; return `<div class="tbl-wrap"><table><thead><tr>${o.semMunicipio?'':th('Município','municipio',l)}${th('Ministério','ministerio',l)}${th('Ano','ano',l)}${th('Pedido (objeto)','objeto',l)}${th('Valor solicitado','valor_solicitado',l,'num')}${th('Como chegou','recebido',l)}${th('Data','data_recebido',l)}${th('Quem pediu','solicitante',l)}${th('Atendido','atendido_flag',l)}${acoes?'<th></th>':''}</tr></thead><tbody>
+  ${rows.map(x=>`<tr>${o.semMunicipio?'':`<td><span class="m" data-mun="${esc(x.municipio)}">${esc(tituloCase(x.municipio))}</span></td>`}<td>${fl('ministerio',x.ministerio)}</td><td>${fl('ano',x.ano)}</td><td>${o.q?hl(x.objeto,o.q):esc(x.objeto)}</td><td class="num">${x.valor_solicitado?brl(x.valor_solicitado):'<span class="muted">sem valor</span>'}</td><td class="small">${esc(x.recebido)}</td><td class="small" style="white-space:nowrap">${esc(x.data_recebido)}</td><td class="small">${o.q?hl(x.solicitante,o.q):esc(x.solicitante)}</td><td>${x.atendido_flag==='SIM'?`<span class="badge SIM" ${fAttr('atendido','SIM')}>${esc(x.atendido)}</span>`:`<span class="muted f" ${fAttr('atendido','NÃO')}>—</span>`}</td>${acoes?`<td class="small acoes"><button type="button" class="btn sm" data-editar-oficio="${x.id}">✎ Editar</button><button type="button" class="btn sm" data-excluir-oficio="${x.id}">🗑 Excluir</button></td>`:''}</tr>`).join('')}
+  ${rows.length?`<tr class="total"><td colspan="${o.semMunicipio?3:4}">Total (${int(rows.length)} pedidos)</td><td class="num">${brl(sum(rows,x=>x.valor_solicitado))}</td><td colspan="${acoes?5:4}"></td></tr>`:`<tr><td colspan="${9+(acoes?1:0)}" class="muted">Nenhum ofício encontrado.</td></tr>`}</tbody></table></div>`; }
+
+// ---------- PAINEL (BI em níveis: cada clique acrescenta um filtro e redesenha) ----------
+function renderPainel(){
+  const f=estado.f; const raiz=!temFiltro();
+  const em=filtraEmendas(), of=filtraOficios(), muns=filtraMunicipios();
+  const munE=uniq(em.map(e=>e.municipio)), munO=uniq(of.map(o=>o.municipio));
+  const ok=em.filter(e=>['PAGA','ENTREGUE'].includes(e.situacao_grupo)); const totE=sum(em,e=>e.valor), totOk=sum(ok,e=>e.valor), totO=sum(of,o=>o.valor_solicitado);
+  const fixo=k=>!!f[k];
+  const dimsE=[['ministerio','Emendas por ministério','barras'],['ano','Emendas por ano de destinação','colunas'],['situacao','Situação das emendas','rosca'],['regiao','Emendas por região','barras'],['municipio','Emendas por município','barras'],['partido','Emendas por partido do prefeito','barras']].filter(d=>!fixo(d[0]));
+  const dimsO=[['ministerio','Ofícios por ministério','barras'],['ano','Ofícios por ano','colunas'],['atendido','Ofícios atendidos','rosca'],['regiao','Ofícios por região','barras'],['municipio','Ofícios por município','barras']].filter(d=>!fixo(d[0]));
+  const chaveE={ministerio:e=>e.ministerio,ano:e=>e.ano,situacao:e=>e.situacao_grupo,regiao:e=>e.regiao,municipio:e=>e.municipio,partido:e=>byName[e.municipio].prefeito_partido||'(sem partido)'};
+  const chaveO={ministerio:o=>o.ministerio,ano:o=>o.ano,atendido:o=>o.atendido_flag,regiao:o=>o.regiao,municipio:o=>o.municipio};
+  const cardE=([dim,titulo,tipo])=>{ const items=agrupar(em,chaveE[dim],e=>e.valor); const qs={}; em.forEach(e=>{ const k=chaveE[dim](e); qs[k]=(qs[k]||0)+1; }); items.forEach(i=>i.q=qs[i.n]); if(items.length<=1) return ''; if(dim==='ano') items.sort((a,b)=>a.n.localeCompare(b.n));
+    const corpo = tipo==='colunas'?colunas(items,{dim}) : tipo==='rosca'?rosca(items,{dim,cores:COR_SIT,centro:brlCurto(totE),centro2:int(em.length)+' emendas'}) : barras(items,{dim,limite:dim==='municipio'?15:14,mostrarQ:true,rotulo:dim==='municipio'?tituloCase:null});
+    return `<div class="card"><h2>${titulo} <span class="small">${items.length} ${dim==='municipio'?'municípios':'itens'} · valor (qtd)</span></h2>${corpo}</div>`; };
+  const cardO=([dim,titulo,tipo])=>{ const items=agrupar(of,chaveO[dim]); const vm={}; of.forEach(o=>{ const k=chaveO[dim](o); vm[k]=(vm[k]||0)+(o.valor_solicitado||0); }); items.forEach(i=>{ i.tip=`${dim==='municipio'?tituloCase(i.n):i.n}: ${int(i.v)} pedido(s) · ${brlCurto(vm[i.n]||0)} solicitados`; }); if(items.length<=1) return ''; if(dim==='ano') items.sort((a,b)=>a.n.localeCompare(b.n));
+    const corpo = tipo==='colunas'?colunas(items,{dim,fmt:int,sec:true}) : tipo==='rosca'?rosca(items,{dim,fmt:int,cores:COR_SIT,centro:int(of.length),centro2:'pedidos'}) : barras(items,{dim,fmt:int,sec:true,limite:dim==='municipio'?15:12,rotulo:dim==='municipio'?tituloCase:null});
+    return `<div class="card"><h2>${titulo} <span class="small">${items.length} ${dim==='municipio'?'municípios':'itens'} · quantidade</span></h2>${corpo}</div>`; };
+  const cardsE=dimsE.map(cardE).filter(Boolean), cardsO=dimsO.map(cardO).filter(Boolean);
+  const fim = !cardsE.length && !cardsO.length;
+  const tiles=`<div class="tiles">
+    <div class="tile em click" data-go='{"tab":"municipios"}'><div class="lbl">${raiz?'Municípios na base':'Municípios no recorte'}</div><div class="val">${raiz?MUNS.length:muns.filter(m=>m.tipo!=='nacional').length}</div><div class="sub">${raiz?`de ${TOTAL_MUNICIPIOS_GO} em Goiás${DADOS.length>MUNS.length?' + ficha nacional':''}`:`${munE.length} com emendas · ${munO.length} com ofícios`}</div></div>
+    <div class="tile em click" data-go='{"tab":"emendas"}'><div class="lbl">Emendas destinadas</div><div class="val">${brlCurto(totE)}</div><div class="sub">${int(em.length)} emendas · ${brl(totE)}</div></div>
+    <div class="tile em ${fixo('situacao')?'':'click'}" ${fixo('situacao')?'':fAttr('situacao','PAGA')}><div class="lbl">Pagas ou entregues</div><div class="val">${brlCurto(totOk)}</div><div class="sub">${int(ok.length)} emendas · ${pct(ok.length,em.length)} da qtd · ${pct(totOk,totE)} do valor</div></div>
+    <div class="tile em"><div class="lbl">Valor médio</div><div class="val">${brlCurto(em.length?totE/em.length:0)}</div><div class="sub">por emenda${munE.length?' · '+brlCurto(totE/munE.length)+' por município':''}</div></div>
+    <div class="tile of click" data-go='{"tab":"oficios"}'><div class="lbl">Ofícios (pedidos) recebidos</div><div class="val">${int(of.length)}</div><div class="sub">${brlCurto(totO)} solicitados · ${int(of.filter(o=>!o.valor_solicitado).length)} sem valor</div></div>
+    <div class="tile of ${fixo('atendido')?'':'click'}" ${fixo('atendido')?'':fAttr('atendido','SIM')}><div class="lbl">Ofícios atendidos</div><div class="val">${int(of.filter(o=>o.atendido_flag==='SIM').length)}</div><div class="sub">${pct(of.filter(o=>o.atendido_flag==='SIM').length,of.length)} dos pedidos</div></div>
+    ${raiz?`<div class="tile"><div class="lbl">População coberta</div><div class="val">${int(sum(MUNS,m=>m.populacao))}</div><div class="sub">IBGE 2022 · ${int(sum(MUNS,m=>m.eleitores_2024))} eleitores (2024)</div></div>
+    <div class="tile"><div class="lbl">Votos Vanderlan 2018</div><div class="val">${int(sum(MUNS,m=>(m.eleicao_2018||{}).votos_vanderlan))}</div><div class="sub">${pct(sum(MUNS,m=>(m.eleicao_2018||{}).votos_vanderlan),sum(MUNS,m=>(m.eleicao_2018||{}).eleitores))} dos eleitores de 2018</div></div>
+    <div class="tile click" ${fAttr('psd','TEM','municipios')}><div class="lbl">Prefeituras com vereador do PSD</div><div class="val">${MUNS.filter(m=>m.psd_representantes>0).length}</div><div class="sub">de ${MUNS.length} municípios</div></div>`:
+    `<div class="tile"><div class="lbl">População no recorte</div><div class="val">${int(sum(muns,m=>m.populacao))}</div><div class="sub">${int(sum(muns,m=>m.eleitores_2024))} eleitores (2024)</div></div>`}
+  </div>`;
+  const extrasRaiz = raiz ? `<div class="secao"><h2>Rankings e política</h2></div><div class="grid">
+    <div class="card"><h2>Top 10 municípios por valor de emendas</h2><ol class="ranking">${[...MUNS].sort((a,b)=>b.emendas_total-a.emendas_total).slice(0,10).map(m=>`<li><span data-mun="${esc(m.municipio)}">${esc(tituloCase(m.municipio))}</span><span>${brl(m.emendas_total)}</span></li>`).join('')}</ol></div>
+    <div class="card"><h2>Top 10 por valor por habitante</h2><ol class="ranking">${[...MUNS].filter(m=>m.populacao).map(m=>({m,v:m.emendas_total/m.populacao})).sort((a,b)=>b.v-a.v).slice(0,10).map(x=>`<li><span data-mun="${esc(x.m.municipio)}">${esc(tituloCase(x.m.municipio))}</span><span>${brl(x.v)} / hab.</span></li>`).join('')}</ol></div>
+    <div class="card"><h2>Votação de Vanderlan em 2018 <span class="small">% no município (votos válidos)</span></h2>${barras([...MUNS].filter(m=>m.eleicao_2018&&m.eleicao_2018.percentual!=null).sort((a,b)=>b.eleicao_2018.percentual-a.eleicao_2018.percentual).map(m=>({n:m.municipio,v:m.eleicao_2018.percentual,tip:`${tituloCase(m.municipio)}: ${m.eleicao_2018.percentual}% (${int(m.eleicao_2018.votos_vanderlan)} votos, ${m.eleicao_2018.classificacao} lugar)`})),{fmt:v=>v.toLocaleString('pt-BR')+'%',limite:12,mun:true,rotulo:tituloCase})}</div>
+  </div>` : '';
+  const fichaMun = f.municipio && byName[f.municipio] ? (m=>`<div class="card" style="margin-bottom:12px"><h2>${esc(tituloCase(m.municipio))} <span class="small">${esc(m.regiao||'')} · ${(m.prefeito||{}).cargo==='PREFEITA'?'prefeita':'prefeito'} ${esc(tituloCase((m.prefeito||{}).nome||'—'))}${m.prefeito_partido?' ('+esc(m.prefeito_partido)+')':''} · ${int(m.populacao)} hab.</span> <button class="btn sm" data-mun="${esc(m.municipio)}">Abrir ficha completa</button></h2></div>`)(byName[f.municipio]) : '';
+  const limE=fim?1000:30, limO=fim?1000:30;
+  const acoesTab = souGestor();
+  const tabE = em.length ? `<div class="secao"><h2>Emendas deste recorte</h2><span class="small">${int(em.length)} · ${brl(totE)}</span><button class="btn sm" id="expBIe">Baixar planilha</button><button class="btn sm" data-go='{"tab":"emendas"}'>Ver na aba Emendas</button></div>${tabelaEmendas(ordenar(em,'valor',-1).slice(0,limE),{semMunicipio:!!f.municipio&&SETS.municipio.has(norm(f.municipio)),acoes:acoesTab})}${em.length>limE?`<div class="nota">Mostrando ${limE} de ${int(em.length)}. Use "Ver na aba Emendas" para todas.</div>`:''}` : '';
+  const tabO = of.length ? `<div class="secao"><h2>Ofícios (pedidos) deste recorte</h2><span class="small">${int(of.length)} · ${brl(totO)} solicitados</span><button class="btn sm" id="expBIo">Baixar planilha</button><button class="btn sm" data-go='{"tab":"oficios"}'>Ver na aba Ofícios</button></div>${tabelaOficios(ordenar(of,'ano',-1).slice(0,limO),{semMunicipio:!!f.municipio&&SETS.municipio.has(norm(f.municipio)),acoes:acoesTab})}${of.length>limO?`<div class="nota">Mostrando ${limO} de ${int(of.length)}. Use "Ver na aba Ofícios" para todos.</div>`:''}` : '';
+  const vazio = !em.length && !of.length ? `<div class="card"><b>Nada encontrado com esses filtros.</b> <span class="muted">Tire um filtro na trilha acima ou clique em "Painel geral".</span></div>` : '';
+  $('#app').innerHTML=`${aviso()}${barraFiltros()}<div class="dica">${raiz?'Clique em qualquer barra, fatia ou número para abrir um sub-painel só com aquele recorte. Cada clique acrescenta um filtro; a trilha acima mostra o caminho e permite voltar. O filtro vale também nas abas Municípios, Emendas, Ofícios e Contatos.':(fim?'Fim da linha: este recorte não tem mais como ser dividido. Abaixo estão todos os registros.':'Sub-painel filtrado. Continue clicando nos gráficos para refinar, ou tire um filtro na trilha para voltar.')}</div>${fichaMun}${tiles}${vazio}
+    ${cardsE.length?`<div class="secao"><h2>Emendas destinadas</h2><span class="small">como se distribuem neste recorte · clique para abrir</span></div><div class="grid">${cardsE.join('')}</div>`:''}
+    ${cardsO.length?`<div class="secao"><h2>Ofícios (pedidos recebidos)</h2><span class="small">quantidade de pedidos neste recorte · clique para abrir</span></div><div class="grid">${cardsO.join('')}</div>`:''}
+    ${extrasRaiz}${tabE}${tabO}`;
+  ligarTudo($('#app'), null, renderPainel);
+  const be=$('#expBIe'); if(be) be.addEventListener('click',()=>csv(ordenar(em,'valor',-1),COLS_E,'emendas-recorte.csv'));
+  const bo=$('#expBIo'); if(bo) bo.addEventListener('click',()=>csv(ordenar(of,'ano',-1),COLS_O,'oficios-recorte.csv'));
+}
+
+// ---------- MUNICÍPIOS ----------
+function renderMunicipios(){
+  const l=estado.loc.municipios;
+  let lista=filtraMunicipios().filter(m=>!l.q||m._busca.includes(norm(l.q)));
+  lista=ordenar(lista,l.sort,l.sort==='municipio'?1:-1);
+  const max=Math.max(...DADOS.map(m=>m.emendas_total),1);
+  const em=filtraEmendas(); const porMun={}; em.forEach(e=>{ porMun[e.municipio]=(porMun[e.municipio]||0)+(e.valor||0); }); const recorte=temFiltro()&&(estado.f.ministerio||estado.f.ano||estado.f.situacao);
+  $('#app').innerHTML=`${aviso()}${barraFiltros(`<label class="grow">Buscar na ficha<input data-l="q" value="${esc(l.q)}" placeholder="nome, prefeito, pessoa, telefone…"></label><label>Ordenar por<select data-l="sort"><option value="emendas_total" ${l.sort==='emendas_total'?'selected':''}>Valor de emendas</option><option value="municipio" ${l.sort==='municipio'?'selected':''}>Nome</option><option value="populacao" ${l.sort==='populacao'?'selected':''}>População</option><option value="oficios_qtd" ${l.sort==='oficios_qtd'?'selected':''}>Nº de ofícios</option><option value="eleitores_2024" ${l.sort==='eleitores_2024'?'selected':''}>Eleitores 2024</option></select></label>`)}
+  <div class="secao"><h1 style="margin:0">Municípios <span class="muted small">${lista.length} de ${DADOS.length}${recorte?' · valores de emendas já considerando o filtro':''}</span></h1>${souGestor()?'<button class="btn primary" data-novo-municipio>＋ Novo município</button>':''}</div>
+  <div class="dica">Toque em um cartão para abrir a ficha completa do município.</div>
+  <div class="mun-grid">${lista.map(m=>{ const p=m.prefeito||{}; const e18=m.eleicao_2018||{}; const vE=recorte?(porMun[m.municipio]||0):m.emendas_total; return `<div class="mun" data-mun="${esc(m.municipio)}">
+    <div class="name"><span>${esc(tituloCase(m.municipio))}</span><span class="reg">${esc(m.regiao||'')}</span></div>
+    <div class="row"><span>${esc(p.cargo?tituloCase(p.cargo):'Prefeito')}</span><b>${esc(tituloCase(p.nome||'—'))}${p.partido?' ('+esc(p.partido)+')':''}</b></div>
+    <div class="row"><span>Emendas${recorte?' (no filtro)':''}</span><b>${brl(vE)} <span class="muted">(${recorte?em.filter(e=>e.municipio===m.municipio).length:m.emendas_qtd})</span></b></div>
+    <div class="mini"><i style="width:${(vE/max*100).toFixed(1)}%"></i></div>
+    <div class="row"><span>Ofícios recebidos</span><b>${m.oficios_qtd} <span class="muted">· ${brlCurto(m.oficios_valor_total)}</span></b></div>
+    <div class="row"><span>População · Eleitores</span><b>${int(m.populacao)} · ${int(m.eleitores_2024)}</b></div>
+    <div class="row"><span>Vanderlan 2018</span><b>${e18.percentual!=null?e18.percentual+'%':'—'} <span class="muted">${e18.classificacao?'· '+esc(e18.classificacao)+' lugar':''}</span></b></div>
+    <div class="row"><span>PSD na Câmara</span><b>${m.psd_representantes>0?m.psd_representantes+' vereador(es)':(m.psd_representantes===0?'nenhum':'—')}</b></div>
+  </div>`;}).join('')||'<div class="card muted">Nenhum município com esse filtro.</div>'}</div>`;
+  ligarTudo($('#app'), l, renderMunicipios);
+}
+
+// ---------- FICHA ----------
+function pessoa(cargo,p){ if(!p) return ''; if(typeof p==='string') return `<div class="pessoa"><span class="cargo">${cargo}</span><span class="nome">${textoComTel(p)}</span></div>`; return `<div class="pessoa"><span class="cargo">${cargo}</span><span class="nome">${esc(tituloCase(p.nome||''))}${p.partido?` <span class="muted">(${esc(p.partido)})</span>`:''}${p.reeleito?' <span class="badge SIM">reeleito</span>':''}</span><span class="det">${telLinks(p.telefones)}${p.email?` <a href="mailto:${esc(p.email)}">${esc(p.email)}</a>`:''}${p.aniversario?` · aniversário ${esc(p.aniversario)}`:''}</span></div>`; }
+function renderFicha(m){
+  const e18=m.eleicao_2018||{};
+  const acoesTab = souGestor();
+  $('#app').innerHTML=`<div class="ficha-top"><div><h1>${esc(tituloCase(m.municipio))}</h1><div class="sub">${esc(m.regiao||'')}${m.aniversario?` · aniversário da cidade: ${esc(m.aniversario.toLowerCase())}`:''}</div></div>
+    <div><button class="btn" data-go='{"tab":"municipios"}'>‹ Voltar</button> <button class="btn primary" ${fAttr('municipio',m.municipio,'painel')}>Explorar no painel</button> <button class="btn" onclick="window.print()">Imprimir</button>
+    ${pode('inserir_emenda')?`<button class="btn" data-inserir-emenda="${esc(m.municipio)}">＋ Inserir emenda</button>`:''}
+    ${pode('inserir_oficio')?`<button class="btn" data-inserir-oficio="${esc(m.municipio)}">＋ Inserir ofício</button>`:''}
+    ${souGestor()?`<button class="btn" data-editar-municipio="${esc(m.municipio)}">Editar dados do município</button><button class="btn" data-excluir-municipio="${esc(m.municipio)}">🗑 Excluir município</button>`:''}
+    </div></div>
+  <div class="tiles">
+    <div class="tile em"><div class="lbl">Emendas destinadas</div><div class="val">${brlCurto(m.emendas_total)}</div><div class="sub">${m.emendas_qtd} emendas${m.emendas_valor_total_informado!=null&&Math.abs(m.emendas_valor_total_informado-m.emendas_total)>1?` · ficha informa ${brl(m.emendas_valor_total_informado)}`:''}</div></div>
+    <div class="tile of"><div class="lbl">Ofícios recebidos</div><div class="val">${m.oficios_qtd}</div><div class="sub">${brlCurto(m.oficios_valor_total)} solicitados</div></div>
+    <div class="tile"><div class="lbl">População</div><div class="val">${int(m.populacao)}</div><div class="sub">IBGE 2022 · ${m.area_km2?int(m.area_km2)+' km²':''}</div></div>
+    <div class="tile"><div class="lbl">Eleitores 2024</div><div class="val">${int(m.eleitores_2024)}</div><div class="sub">IDH ${m.idh!=null?m.idh.toLocaleString('pt-BR',{minimumFractionDigits:3}):'—'} ${esc((m.idh_classe||'').toLowerCase())}</div></div>
+    <div class="tile"><div class="lbl">Vanderlan em 2018</div><div class="val">${e18.percentual!=null?e18.percentual.toLocaleString('pt-BR')+'%':'—'}</div><div class="sub">${int(e18.votos_vanderlan)} votos · ${esc(e18.classificacao||'')} lugar · ${int(e18.eleitores)} eleitores</div></div>
+  </div>
+  <div class="grid">
+    <div class="card"><h2>Autoridades</h2>
+      ${pessoa((m.prefeito||{}).cargo==='PREFEITA'?'Prefeita':'Prefeito', m.prefeito)}
+      ${pessoa('Primeira-dama / cônjuge', m.primeira_dama)}
+      ${pessoa('Vice-prefeito(a)', m.vice_prefeito)}
+      ${pessoa('Presidente da Câmara', m.presidente_camara)}
+      ${pessoa('Secretaria de Saúde', m.secretario_saude)}
+      ${m.assessor_2018?pessoa('Assessor responsável (2018)', m.assessor_2018):''}
+    </div>
+    <div class="card"><h2>PSD no município</h2>
+      ${pessoa('Presidente do PSD', m.psd_presidente||'não informado')}
+      <div class="pessoa"><span class="cargo">Representação na Câmara</span><span class="det">${esc(m.psd_representantes_texto||'não informado')}</span></div>
+      ${m.vereadores_psd?pessoa('Vereador(es) do PSD', m.vereadores_psd):''}
+      <h3>Deputados parceiros da prefeitura</h3>
+      <dl class="kv"><dt>Federal</dt><dd>${esc(m.dep_federal||'não informado')}</dd><dt>Estadual</dt><dd>${esc(m.dep_estadual||'não informado')}</dd></dl>
+    </div>
+    <div class="card"><h2>Eleições</h2>
+      ${m.eleicao_2020?`<h3>2020</h3><div class="texto">${esc(m.eleicao_2020)}</div>`:''}
+      ${m.eleicao_2024?`<h3>2024</h3><div class="texto">${esc(m.eleicao_2024)}</div>`:''}
+      ${!m.eleicao_2020&&!m.eleicao_2024?'<div class="muted">Sem texto na ficha.</div>':''}
+    </div>
+    <div class="card"><h2>Companheiros e contatos</h2><div class="texto">${m.companheiros?textoComTel(m.companheiros).replace(/\s*\/\/\s*/g,'<br>'):'<span class="muted">Nenhum registrado.</span>'}</div>
+      ${m.observacoes&&m.observacoes.length?`<h3>Outras anotações da ficha</h3><div class="texto">${m.observacoes.map(o=>textoComTel(o)).join('<br>')}</div>`:''}</div>
+  </div>
+  ${m.emendas.length?`<div class="grid" style="margin-bottom:12px">
+    <div class="card"><h2>Situação das emendas</h2>${rosca(agrupar(m.emendas,'situacao_grupo',e=>e.valor),{cores:COR_SIT,centro:brlCurto(m.emendas_total),centro2:m.emendas_qtd+' emendas'})}</div>
+    <div class="card"><h2>Emendas por ano</h2>${colunas(agrupar(m.emendas,'ano',e=>e.valor).sort((a,b)=>a.n.localeCompare(b.n)))}</div>
+    <div class="card"><h2>Por ministério</h2>${barras(agrupar(m.emendas,'ministerio',e=>e.valor))}</div>
+    ${(m.resumo_beneficiarios||[]).length?`<div class="card"><h2>Por beneficiário <span class="small">resumo da ficha</span></h2>${barras(m.resumo_beneficiarios.map(b=>({n:b.beneficiario,v:b.valor})))}</div>`:''}
+  </div>`:''}
+  <div class="card" style="margin-bottom:12px"><h2>Emendas destinadas <span class="small">${m.emendas_qtd} · ${brl(m.emendas_total)}</span></h2>${tabelaEmendas(ordenar(m.emendas,'ano',-1),{semMunicipio:true,acoes:acoesTab})}</div>
+  <div class="card"><h2>Ofícios recebidos <span class="small">${m.oficios_qtd} pedidos · ${brl(m.oficios_valor_total)} solicitados</span></h2>${tabelaOficios(ordenar(m.oficios,'ano',-1),{semMunicipio:true,acoes:acoesTab})}</div>
+  <div class="nota">Fonte: ${esc(m.arquivo||'')}</div>`;
+}
+
+// ---------- EMENDAS ----------
+function renderEmendas(){
+  const l=estado.loc.emendas; const rows=ordenar(filtraEmendas(F(),l.q),l.sort,l.dir); const page=rows.slice(l.page*PAGE,(l.page+1)*PAGE);
+  $('#app').innerHTML=`${aviso()}${barraFiltros(`<label class="grow">Buscar no objeto<input data-l="q" value="${esc(l.q)}" placeholder="ex.: ambulância, pá carregadeira, custeio…"></label>`)}
+  <div class="secao"><h1 style="margin:0">Emendas destinadas</h1>${pode('inserir_emenda')?'<button class="btn primary" data-inserir-emenda>＋ Inserir emenda</button>':''}</div>
+  <div class="dica">Lista de emendas enviadas às cidades. Toque no nome do município para ver a ficha.</div>
+  <div class="resumo"><span><b>${int(rows.length)}</b> emendas</span><span>somando <b>${brl(sum(rows,e=>e.valor))}</b></span><span>em <b>${uniq(rows.map(e=>e.municipio)).length}</b> municípios</span><button class="btn sm primary" id="expE">Baixar planilha</button><button class="btn sm" data-go='{"tab":"painel"}'>Ver como painel</button></div>
+  ${tabelaEmendas(page,{l,q:l.q,acoes:souGestor()})}${pager(l,rows.length)}`;
+  ligarTudo($('#app'), l, renderEmendas);
+  $('#expE').addEventListener('click',()=>csv(rows,COLS_E,'emendas.csv'));
+}
+
+// ---------- OFÍCIOS ----------
+function renderOficios(){
+  const l=estado.loc.oficios; const rows=ordenar(filtraOficios(F(),l.q),l.sort,l.dir); const page=rows.slice(l.page*PAGE,(l.page+1)*PAGE);
+  $('#app').innerHTML=`${aviso()}${barraFiltros(`<label class="grow">Buscar no pedido ou solicitante<input data-l="q" value="${esc(l.q)}" placeholder="ex.: caminhão pipa, asfalto, secretário…"></label>`)}
+  <div class="secao"><h1 style="margin:0">Ofícios recebidos <span class="muted small">pedidos das cidades ao gabinete</span></h1>${pode('inserir_oficio')?'<button class="btn primary" data-inserir-oficio>＋ Inserir ofício</button>':''}</div>
+  <div class="dica">Lista de pedidos recebidos das cidades. Toque no nome do município para ver a ficha.</div>
+  <div class="resumo"><span><b>${int(rows.length)}</b> pedidos</span><span>valor informado <b>${brl(sum(rows,x=>x.valor_solicitado))}</b></span><span><b>${int(rows.filter(x=>!x.valor_solicitado).length)}</b> sem valor</span><span>de <b>${uniq(rows.map(x=>x.municipio)).length}</b> municípios</span><button class="btn sm primary" id="expO">Baixar planilha</button><button class="btn sm" data-go='{"tab":"painel"}'>Ver como painel</button></div>
+  ${tabelaOficios(page,{l,q:l.q,acoes:souGestor()})}${pager(l,rows.length)}`;
+  ligarTudo($('#app'), l, renderOficios);
+  $('#expO').addEventListener('click',()=>csv(rows,COLS_O,'oficios.csv'));
+}
+
+// ---------- CONTATOS ----------
+function renderContatos(){
+  const l=estado.loc.contatos; const q=norm(l.q); const dq=q.replace(/\D/g,''); const f=estado.f;
+  const munSet=new Set(filtraMunicipios().map(m=>m.municipio));
+  const rows=CONTATOS.filter(c=>munSet.has(c.municipio)&&casa(f.cargo,c.cargo,'cargo')&&(!q||c._busca.includes(q)||(dq.length>=4&&c._busca.replace(/\D/g,'').includes(dq))));
+  $('#app').innerHTML=`${aviso()}${barraFiltros(`${combo('cargo')}<label class="grow">Buscar nome ou telefone<input data-l="q" value="${esc(l.q)}" placeholder="ex.: Wander, 99919, Saneago…"></label>`)}
+  <h1>Agenda de contatos <span class="muted small">${int(rows.length)} de ${int(CONTATOS.length)}</span> <button class="btn sm primary" id="expC">Baixar planilha</button></h1>
+  ${temFiltro()?`<div class="dica">Mostrando contatos dos ${munSet.size} municípios do filtro atual.</div>`:''}
+  <div class="tbl-wrap"><table><thead><tr><th>Município</th><th>Cargo</th><th>Nome</th><th>Partido</th><th>Telefones (clique = WhatsApp)</th><th>Detalhe</th></tr></thead><tbody>
+  ${rows.slice(0,600).map(c=>`<tr><td><span class="m" data-mun="${esc(c.municipio)}">${esc(tituloCase(c.municipio))}</span></td><td class="small">${fl('cargo',c.cargo)}</td><td><b>${hl(tituloCase(c.nome),l.q)}</b></td><td>${esc(c.partido)}</td><td>${telLinks(c.telefones)}</td><td class="small muted">${c.texto&&norm(c.texto)!==norm(c.nome)?hl(c.texto,l.q):''}${c.email?` <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Nenhum contato encontrado.</td></tr>'}
+  </tbody></table></div>${rows.length>600?`<div class="nota">Mostrando 600 de ${int(rows.length)}. Refine a busca ou baixe a planilha completa.</div>`:''}`;
+  ligarTudo($('#app'), l, renderContatos);
+  $('#expC').addEventListener('click',()=>csv(rows,[{label:'Município',key:'municipio'},{label:'Cargo',key:'cargo'},{label:'Nome',key:'nome'},{label:'Partido',key:'partido'},{label:'Telefones',get:c=>(c.telefones||[]).join(' / ')},{label:'E-mail',key:'email'},{label:'Texto original',key:'texto'}],'contatos.csv'));
+}
+
+// ---------- BUSCA GLOBAL ----------
+function renderBusca(){
+  const q=estado.q, nq=norm(q), dq=q.replace(/\D/g,'');
+  const muns=DADOS.filter(m=>norm(m.municipio).includes(nq));
+  const ems=EMENDAS.filter(e=>norm(e.objeto+' '+e.situacao+' '+e.ministerio).includes(nq));
+  const ofs=OFICIOS.filter(x=>norm([x.objeto,x.solicitante,x.recebido,x.ministerio].join(' ')).includes(nq));
+  const cts=CONTATOS.filter(c=>c._busca.includes(nq)||(dq.length>=4&&c._busca.replace(/\D/g,'').includes(dq)));
+  const fichas=DADOS.filter(m=>m._busca.includes(nq)&&!muns.includes(m));
+  const irAba=(tab,campo)=>`<button class="btn sm" data-ir="${tab}" data-campo="${campo}">ver na aba com filtros</button>`;
+  const sec=(t,arr,fn,go)=>arr.length?`<div class="res-grp"><h3>${t} <span class="muted">(${int(arr.length)})</span>${go||''}</h3>${arr.slice(0,25).map(fn).join('')}${arr.length>25?`<div class="muted small">… e mais ${int(arr.length-25)}. Use a aba com filtros para ver todos.</div>`:''}</div>`:'';
+  $('#app').innerHTML=`<h1>Resultados para “${esc(q)}”</h1>
+  ${sec('Municípios',muns,m=>`<div class="res" data-mun="${esc(m.municipio)}"><div class="t">${hl(tituloCase(m.municipio),q)} <span class="muted small">${esc(m.regiao||'')}</span></div><div class="d">${esc(tituloCase((m.prefeito||{}).nome||''))} · ${brl(m.emendas_total)} em emendas · ${m.oficios_qtd} ofícios</div></div>`)}
+  ${sec('Contatos e pessoas',cts,c=>`<div class="res" data-mun="${esc(c.municipio)}"><div class="t">${hl(tituloCase(c.nome),q)} <span class="muted small">${esc(c.cargo)} · ${esc(tituloCase(c.municipio))}</span></div><div class="d">${hl(c.texto,q)}</div></div>`,irAba('contatos','contatos'))}
+  ${sec('Fichas que citam o termo',fichas,m=>{ const i=m._busca.indexOf(nq); const src=[m.municipio,m.regiao,(m.prefeito||{}).texto,(m.vice_prefeito||{}).texto,(m.presidente_camara||{}).texto,m.primeira_dama,m.secretario_saude,m.psd_presidente,m.vereadores_psd,m.companheiros,m.dep_federal,m.dep_estadual,m.eleicao_2020,m.eleicao_2024,(m.observacoes||[]).join(' ')].join(' | '); const tr=src.slice(Math.max(0,i-60),i+80); return `<div class="res" data-mun="${esc(m.municipio)}"><div class="t">${esc(tituloCase(m.municipio))}</div><div class="d">…${hl(tr,q)}…</div></div>`; })}
+  ${sec('Emendas',ems,e=>`<div class="res" data-mun="${esc(e.municipio)}"><div class="t">${hl(e.objeto,q)}</div><div class="d">${esc(tituloCase(e.municipio))} · ${esc(e.ministerio)} · ${esc(e.ano)} · ${brl(e.valor)} · ${badge(e.situacao_grupo,false)}</div></div>`,irAba('emendas','emendas'))}
+  ${sec('Ofícios (pedidos)',ofs,x=>`<div class="res" data-mun="${esc(x.municipio)}"><div class="t">${hl(x.objeto,q)}</div><div class="d">${esc(tituloCase(x.municipio))} · ${esc(x.ministerio)} · ${esc(x.ano)} · ${x.valor_solicitado?brl(x.valor_solicitado):'sem valor'} · pediu: ${hl(x.solicitante,q)}</div></div>`,irAba('oficios','oficios'))}
+  ${!muns.length&&!ems.length&&!ofs.length&&!cts.length&&!fichas.length?'<div class="muted">Nada encontrado. Tente uma palavra mais curta ou sem acento.</div>':''}`;
+  $$('[data-ir]').forEach(b=>b.addEventListener('click',()=>{ estado.loc[b.dataset.campo].q=q; $('#busca').value=''; estado.q=''; go(b.dataset.ir); }));
+}
+
+// ---------- USUÁRIOS (gestor) ----------
+let USUARIOS=[];
+async function renderUsuarios(){
+  if(!souGestor()){ $('#app').innerHTML='<div class="card">Seu perfil não tem acesso a esta aba.</div>'; return; }
+  $('#app').innerHTML='<h1>Usuários</h1><div class="carregando-inline">Carregando…</div>';
+  try{ USUARIOS = await rpc('listar_usuarios',{p_token:SESSAO.token}); }
+  catch(e){ $('#app').innerHTML=`<div class="card">Erro ao carregar usuários: ${esc(e.texto||e.message)}</div>`; return; }
+  desenharUsuarios();
+}
+function desenharUsuarios(){
+  $('#app').innerHTML = `<div class="secao"><h1 style="margin:0">Usuários</h1><button class="btn primary" data-novo-usuario>＋ Novo acesso</button></div>
+  <div class="dica">Aqui você cria e administra quem pode entrar no sistema.</div>
+  <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>Acesso</th><th>Perfil</th><th>Situação</th><th>Senha</th><th></th></tr></thead><tbody>
+  ${USUARIOS.map(u=>`<tr><td>${esc(u.nome)}</td><td>${esc(u.login)}</td><td>${rotuloPapel(u.papel)}</td><td>${u.ativo?'<span class="badge SIM">Ativo</span>':'<span class="badge CANCELADA">Inativo</span>'}</td><td class="small muted">${u.precisa_trocar?'precisa trocar':'ok'}</td>
+  <td class="small acoes">
+    <button type="button" class="btn sm" data-redefinir-senha="${u.id}">Redefinir senha</button>
+    <button type="button" class="btn sm" data-alterar-usuario="${u.id}">Alterar</button>
+    ${SESSAO.usuario.id!==u.id?`<button type="button" class="btn sm" data-ativar-usuario="${u.id}">${u.ativo?'Desativar':'Ativar'}</button><button type="button" class="btn sm" data-remover-usuario="${u.id}">Remover</button>`:'<span class="muted small">(você)</span>'}
+  </td></tr>`).join('')||'<tr><td colspan="6" class="muted">Nenhum usuário.</td></tr>'}
+  </tbody></table></div>`;
+}
+function abrirFormUsuario(){
+  const corpo=`<h2>Novo acesso</h2><form id="f-usuario" class="form-grid">
+    <label>Nome<input id="fu-nome" required></label>
+    <label>Acesso<input id="fu-login" required placeholder="ex.: joao.silva"></label>
+    <label>Perfil<select id="fu-papel"><option value="consulta">Quem só consulta</option><option value="inseridor">Quem insere dados</option><option value="gestor">Responsável</option></select></label>
+    <div class="form-acoes"><button type="button" class="btn" id="fu-cancelar">Cancelar</button><button type="submit" class="btn ok">Criar acesso</button></div>
+  </form>`;
+  abrirModal(corpo);
+  $('#fu-cancelar').addEventListener('click', fecharModal);
+  $('#f-usuario').addEventListener('submit', async ev=>{
+    ev.preventDefault();
+    const nome=$('#fu-nome').value.trim(), login=$('#fu-login').value.trim(), papel=$('#fu-papel').value;
+    if(!nome||!login) return;
+    try{
+      const r=await rpc('criar_usuario',{p_token:SESSAO.token,p_login:login,p_nome:nome,p_papel:papel});
+      USUARIOS.push({id:r.id, login:r.login, nome, papel, precisa_trocar:true, ativo:true, criado_em:new Date().toISOString()});
+      desenharUsuarios();
+      abrirModalCredenciais(r.login, r.senha);
+    }catch(e){ toast(e.texto||e.message,'erro'); }
+  });
+}
+function abrirFormAlterarUsuario(id){
+  const u=USUARIOS.find(x=>x.id===id); if(!u) return;
+  const corpo=`<h2>Alterar usuário</h2><form id="f-alt-usuario" class="form-grid">
+    <label>Nome<input id="au-nome" value="${esc(u.nome)}" required></label>
+    <label>Perfil<select id="au-papel"><option value="consulta" ${u.papel==='consulta'?'selected':''}>Quem só consulta</option><option value="inseridor" ${u.papel==='inseridor'?'selected':''}>Quem insere dados</option><option value="gestor" ${u.papel==='gestor'?'selected':''}>Responsável</option></select></label>
+    <div class="form-acoes"><button type="button" class="btn" id="au-cancelar">Cancelar</button><button type="submit" class="btn ok">Salvar</button></div>
+  </form>`;
+  abrirModal(corpo);
+  $('#au-cancelar').addEventListener('click', fecharModal);
+  $('#f-alt-usuario').addEventListener('submit', async ev=>{
+    ev.preventDefault();
+    const nome=$('#au-nome').value.trim(), papel=$('#au-papel').value;
+    try{ await rpc('alterar_usuario',{p_token:SESSAO.token,p_id:id,p:{nome,papel}}); u.nome=nome; u.papel=papel; fecharModal(); toast('Usuário atualizado.'); desenharUsuarios(); }
+    catch(e){ toast(e.texto||e.message,'erro'); }
+  });
+}
+function redefinirSenha(id){
+  const u=USUARIOS.find(x=>x.id===id); if(!u) return;
+  confirmarAcao(`Redefinir a senha de ${u.nome} (${u.login}) para 12345?`, async ()=>{
+    try{ const r=await rpc('redefinir_senha',{p_token:SESSAO.token,p_id:id}); u.precisa_trocar=true; fecharModal(); abrirModalCredenciais(r.login, r.senha); }
+    catch(e){ toast(e.texto||e.message,'erro'); }
+  }, {titulo:'Redefinir senha', label:'Redefinir', perigo:false});
+}
+function alternarAtivoUsuario(id){
+  const u=USUARIOS.find(x=>x.id===id); if(!u) return;
+  const novo=!u.ativo;
+  confirmarAcao(`${novo?'Ativar':'Desativar'} o acesso de ${u.nome}?`, async ()=>{
+    try{ await rpc('alterar_usuario',{p_token:SESSAO.token,p_id:id,p:{ativo:novo}}); u.ativo=novo; fecharModal(); toast('Situação atualizada.'); desenharUsuarios(); }
+    catch(e){ toast(e.texto||e.message,'erro'); }
+  }, {titulo:novo?'Ativar acesso':'Desativar acesso', label:novo?'Ativar':'Desativar', perigo:!novo});
+}
+function removerUsuario(id){
+  const u=USUARIOS.find(x=>x.id===id); if(!u) return;
+  confirmarAcao(`Remover definitivamente o acesso de ${u.nome} (${u.login})?`, async ()=>{
+    try{ await rpc('remover_usuario',{p_token:SESSAO.token,p_id:id}); USUARIOS=USUARIOS.filter(x=>x.id!==id); fecharModal(); toast('Usuário removido.'); desenharUsuarios(); }
+    catch(e){ toast(e.texto||e.message,'erro'); }
+  }, {titulo:'Remover acesso', label:'Remover'});
+}
+function abrirModalCredenciais(login, senha){
+  const link = location.href.split('#')[0];
+  const texto = `Sistema: ${link}\nAcesso: ${login}\nSenha: ${senha}\nNo primeiro acesso o sistema pede para criar uma senha nova.`;
+  const corpo = `<h2>Acesso criado</h2>
+    <dl class="kv confirm"><dt>Sistema</dt><dd>${esc(link)}</dd><dt>Acesso</dt><dd>${esc(login)}</dd><dt>Senha</dt><dd>${esc(senha)}</dd></dl>
+    <p class="small muted">No primeiro acesso o sistema pede para criar uma senha nova.</p>
+    <div class="form-acoes">
+      <button type="button" class="btn" id="cred-copiar">Copiar dados</button>
+      <button type="button" class="btn primary" id="cred-whats">Enviar por WhatsApp</button>
+    </div>
+    <div id="cred-whats-area" class="hidden" style="margin-top:12px">
+      <label>Telefone (DDD + número)<input id="cred-tel" type="tel" placeholder="62999998888"></label>
+      <div class="form-acoes" style="margin-top:8px">
+        <button type="button" class="btn" id="cred-agenda">Escolher da agenda</button>
+        <button type="button" class="btn primary" id="cred-abrir-whats">Abrir WhatsApp</button>
+      </div>
+    </div>
+    <div class="form-acoes" style="margin-top:14px"><button type="button" class="btn" id="cred-fechar">Fechar</button></div>`;
+  abrirModal(corpo);
+  $('#cred-copiar').addEventListener('click', async ()=>{
+    try{ await navigator.clipboard.writeText(texto); toast('Dados copiados.'); }
+    catch(e){ try{ const ta=document.createElement('textarea'); ta.value=texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Dados copiados.'); }catch(e2){ toast('Não foi possível copiar automaticamente.','erro'); } }
+  });
+  $('#cred-whats').addEventListener('click', ()=> $('#cred-whats-area').classList.remove('hidden'));
+  if(navigator.contacts && navigator.contacts.select){
+    $('#cred-agenda').addEventListener('click', async ()=>{
+      try{ const sel=await navigator.contacts.select(['tel'],{multiple:false}); const c=sel&&sel[0]; if(c && c.tel && c.tel[0]) $('#cred-tel').value=c.tel[0].replace(/\D/g,''); }
+      catch(e){}
+    });
+  } else { const ag=$('#cred-agenda'); if(ag) ag.classList.add('hidden'); }
+  $('#cred-abrir-whats').addEventListener('click', ()=>{
+    const d=$('#cred-tel').value.replace(/\D/g,'');
+    if(d.length<10){ toast('Telefone inválido.','erro'); return; }
+    window.open('https://wa.me/55'+d+'?text='+encodeURIComponent(texto),'_blank');
+  });
+  $('#cred-fechar').addEventListener('click', fecharModal);
+}
+
+// ---------- AUDITORIA (gestor) ----------
+function fmtData(iso){ try{ return new Date(iso).toLocaleString('pt-BR'); }catch(e){ return iso||''; } }
+function resumoDiff(antes,depois){
+  if(!antes && depois) return 'Criado';
+  if(antes && !depois) return 'Removido';
+  if(!antes || !depois) return '';
+  const campos=[]; const chaves=new Set([...Object.keys(antes||{}),...Object.keys(depois||{})]);
+  chaves.forEach(k=>{ if(JSON.stringify(antes[k])!==JSON.stringify(depois[k])) campos.push(k); });
+  return campos.length? esc(campos.join(', ')) : '(sem alteração detectável)';
+}
+async function renderAuditoria(){
+  if(!souGestor()){ $('#app').innerHTML='<div class="card">Seu perfil não tem acesso a esta aba.</div>'; return; }
+  $('#app').innerHTML='<h1>Histórico</h1><div class="carregando-inline">Carregando…</div>';
+  let rows;
+  try{ rows = await rpc('listar_auditoria',{p_token:SESSAO.token, p_limite:300}); }
+  catch(e){ $('#app').innerHTML=`<div class="card">Erro ao carregar auditoria: ${esc(e.texto||e.message)}</div>`; return; }
+  $('#app').innerHTML=`<h1>Histórico <span class="muted small">últimos ${rows.length} eventos</span></h1><div class="dica">Registro de tudo o que foi alterado no sistema.</div>
+  <div class="tbl-wrap"><table><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Tabela</th><th>Registro</th><th>O que mudou</th></tr></thead><tbody>
+  ${rows.map(a=>`<tr><td class="small" style="white-space:nowrap">${esc(fmtData(a.quando))}</td><td>${esc(a.usuario_login||'')}</td><td>${esc(a.acao)}</td><td>${esc(a.tabela||'')}</td><td>${esc(a.registro_id||'')}</td><td class="small">${resumoDiff(a.antes,a.depois)}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Sem registros.</td></tr>'}
+  </tbody></table></div>`;
+}
+
+// ---------- pós-gravação: recalcula, fecha modal, avisa e mantém a aba ----------
+function aposGravar(msg){ recalcular(); fecharModal(); toast(msg); render(); }
+
+// ---------- EMENDA: inserir / editar (com confirmação obrigatória) ----------
+function abrirFormEmenda(municipioSugerido, emendaId){
+  const editando = emendaId!=null;
+  let mun=null, dados={municipio:municipioSugerido||'', ministerio:'', ano:String(new Date().getFullYear()), objeto:'', valor:'', situacao:''};
+  if(editando){
+    const achado=acharEmendaPorId(emendaId);
+    if(!achado){ toast('Registro não encontrado.','erro'); return; }
+    mun=achado.municipio; const e=achado.emenda;
+    dados={municipio:mun.municipio, ministerio:e.ministerio||'', ano:e.ano||'', objeto:e.objeto||'', valor:e.valor??'', situacao:e.situacao||''};
+  }
+  const corpo = `<h2>${editando?'Editar emenda':'Inserir emenda'}</h2>
+    <form id="f-emenda" class="form-grid">
+      <label>Município<input id="fe-municipio" list="dl-municipios" value="${esc(dados.municipio?tituloCase(dados.municipio):'')}" ${editando?'disabled':''} required></label>
+      <label>Ministério<input id="fe-ministerio" list="dl-ministerios" value="${esc(dados.ministerio)}" required></label>
+      <label>Ano<input id="fe-ano" value="${esc(dados.ano)}" required></label>
+      <label class="grow">Objeto<input id="fe-objeto" value="${esc(dados.objeto)}" required></label>
+      <label>Valor (R$)<input id="fe-valor" type="number" step="0.01" min="0" value="${dados.valor}" required></label>
+      <label class="grow">Situação<input id="fe-situacao" value="${esc(dados.situacao)}" placeholder="ex.: paga, empenhada, cancelada…" required></label>
+      <div class="form-acoes"><button type="button" class="btn" id="fe-cancelar">Cancelar</button><button type="submit" class="btn primary">Continuar</button></div>
+    </form>`;
+  abrirModal(corpo);
+  $('#fe-cancelar').addEventListener('click', fecharModal);
+  $('#f-emenda').addEventListener('submit', ev=>{
+    ev.preventDefault();
+    const p={ municipio: $('#fe-municipio').value.trim(), ministerio:$('#fe-ministerio').value.trim(), ano:$('#fe-ano').value.trim(), objeto:$('#fe-objeto').value.trim(), valor:parseFloat($('#fe-valor').value)||0, situacao:$('#fe-situacao').value.trim() };
+    if(!p.municipio||!p.ministerio||!p.ano||!p.objeto||!p.situacao){ toast('Preencha todos os campos.','erro'); return; }
+    confirmarEmenda(p, editando?emendaId:null);
+  });
+}
+function confirmarEmenda(p, emendaId){
+  const linhas=[['Município',tituloCase(p.municipio)],['Ministério',p.ministerio],['Ano',p.ano],['Objeto',p.objeto],['Valor',brl(p.valor)],['Situação',p.situacao]];
+  const corpo=`<h2>Confira antes de gravar</h2><p class="small muted">Confira cada campo com atenção antes de confirmar.</p><dl class="kv confirm">${linhas.map(([k,v])=>`<dt>${esc(k)}</dt><dd style="font-size:15px">${esc(v)}</dd>`).join('')}</dl>
+    <div class="form-acoes"><button type="button" class="btn" id="cfe-voltar">Voltar e corrigir</button><button type="button" class="btn ok" id="cfe-confirmar">Confirmar e gravar</button></div>`;
+  abrirModal(corpo);
+  $('#cfe-voltar').addEventListener('click', ()=>abrirFormEmenda(p.municipio, emendaId));
+  $('#cfe-confirmar').addEventListener('click', async ()=>{
+    try{
+      if(emendaId!=null){
+        await rpc('atualizar_emenda',{p_token:SESSAO.token,p_id:emendaId,p:{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao}});
+        const achado=acharEmendaPorId(emendaId);
+        if(achado) Object.assign(achado.emenda,{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao,situacao_grupo:grupoSituacao(p.situacao)});
+      } else {
+        const alvo=acharMunicipioPorNome(p.municipio);
+        if(!alvo){ toast('Município não encontrado na base. Verifique o nome (escolha da lista de sugestões).','erro'); return; }
+        const r=await rpc('inserir_emenda',{p_token:SESSAO.token,p:{municipio_id:alvo.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao}});
+        alvo.emendas.push({id:r.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao,situacao_grupo:grupoSituacao(p.situacao)});
+      }
+      aposGravar('Registrado com sucesso.');
+    }catch(e){ toast(e.texto||e.message,'erro'); }
+  });
+}
+function excluirEmenda(id){
+  const achado=acharEmendaPorId(id); if(!achado) return;
+  confirmarAcao(`Excluir a emenda "${achado.emenda.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
+    try{ await rpc('excluir_emenda',{p_token:SESSAO.token,p_id:id}); achado.municipio.emendas=achado.municipio.emendas.filter(e=>e.id!==id); aposGravar('Emenda excluída.'); }
+    catch(e){ toast(e.texto||e.message,'erro'); }
+  }, {titulo:'Confirmar exclusão', label:'Excluir'});
+}
+
+// ---------- OFÍCIO: inserir / editar (com confirmação obrigatória) ----------
+function abrirFormOficio(municipioSugerido, oficioId){
+  const editando = oficioId!=null;
+  let mun=null, dados={municipio:municipioSugerido||'', ministerio:'', ano:String(new Date().getFullYear()), objeto:'', valor_solicitado:'', recebido:'', data_recebido:'', solicitante:'', atendido:''};
+  if(editando){
+    const achado=acharOficioPorId(oficioId);
+    if(!achado){ toast('Registro não encontrado.','erro'); return; }
+    mun=achado.municipio; const o=achado.oficio;
+    dados={municipio:mun.municipio, ministerio:o.ministerio||'', ano:o.ano||'', objeto:o.objeto||'', valor_solicitado:o.valor_solicitado??'', recebido:o.recebido||'', data_recebido:o.data_recebido||'', solicitante:o.solicitante||'', atendido:o.atendido||''};
+  }
+  const corpo=`<h2>${editando?'Editar ofício':'Inserir ofício'}</h2>
+  <form id="f-oficio" class="form-grid">
+    <label>Município<input id="fo-municipio" list="dl-municipios" value="${esc(dados.municipio?tituloCase(dados.municipio):'')}" ${editando?'disabled':''} required></label>
+    <label>Ministério<input id="fo-ministerio" list="dl-ministerios" value="${esc(dados.ministerio)}" required></label>
+    <label>Ano<input id="fo-ano" value="${esc(dados.ano)}" required></label>
+    <label class="grow">Pedido (objeto)<input id="fo-objeto" value="${esc(dados.objeto)}" required></label>
+    <label>Valor solicitado (R$)<input id="fo-valor" type="number" step="0.01" min="0" value="${dados.valor_solicitado}"></label>
+    <label>Como chegou<input id="fo-recebido" value="${esc(dados.recebido)}"></label>
+    <label>Data<input id="fo-data" value="${esc(dados.data_recebido)}" placeholder="dd/mm/aaaa"></label>
+    <label>Quem pediu<input id="fo-solicitante" value="${esc(dados.solicitante)}"></label>
+    <label>Atendido<input id="fo-atendido" value="${esc(dados.atendido)}" placeholder="deixe em branco se não"></label>
+    <div class="form-acoes"><button type="button" class="btn" id="fo-cancelar">Cancelar</button><button type="submit" class="btn primary">Continuar</button></div>
+  </form>`;
+  abrirModal(corpo);
+  $('#fo-cancelar').addEventListener('click', fecharModal);
+  $('#f-oficio').addEventListener('submit', ev=>{
+    ev.preventDefault();
+    const p={ municipio:$('#fo-municipio').value.trim(), ministerio:$('#fo-ministerio').value.trim(), ano:$('#fo-ano').value.trim(), objeto:$('#fo-objeto').value.trim(), valor_solicitado: $('#fo-valor').value?parseFloat($('#fo-valor').value):null, recebido:$('#fo-recebido').value.trim(), data_recebido:$('#fo-data').value.trim(), solicitante:$('#fo-solicitante').value.trim(), atendido:$('#fo-atendido').value.trim() };
+    if(!p.municipio||!p.ministerio||!p.ano||!p.objeto){ toast('Preencha ao menos município, ministério, ano e pedido.','erro'); return; }
+    confirmarOficio(p, editando?oficioId:null);
+  });
+}
+function confirmarOficio(p, oficioId){
+  const linhas=[['Município',tituloCase(p.municipio)],['Ministério',p.ministerio],['Ano',p.ano],['Pedido',p.objeto],['Valor solicitado',p.valor_solicitado?brl(p.valor_solicitado):'sem valor'],['Como chegou',p.recebido||'—'],['Data',p.data_recebido||'—'],['Quem pediu',p.solicitante||'—'],['Atendido',p.atendido||'não']];
+  const corpo=`<h2>Confira antes de gravar</h2><p class="small muted">Confira cada campo com atenção antes de confirmar.</p><dl class="kv confirm">${linhas.map(([k,v])=>`<dt>${esc(k)}</dt><dd style="font-size:15px">${esc(v)}</dd>`).join('')}</dl>
+    <div class="form-acoes"><button type="button" class="btn" id="cfo-voltar">Voltar e corrigir</button><button type="button" class="btn ok" id="cfo-confirmar">Confirmar e gravar</button></div>`;
+  abrirModal(corpo);
+  $('#cfo-voltar').addEventListener('click', ()=>abrirFormOficio(p.municipio, oficioId));
+  $('#cfo-confirmar').addEventListener('click', async ()=>{
+    try{
+      if(oficioId!=null){
+        await rpc('atualizar_oficio',{p_token:SESSAO.token,p_id:oficioId,p:{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido}});
+        const achado=acharOficioPorId(oficioId);
+        if(achado) Object.assign(achado.oficio,{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido,atendido_flag:(p.atendido||'').trim()?'SIM':'NÃO'});
+      } else {
+        const alvo=acharMunicipioPorNome(p.municipio);
+        if(!alvo){ toast('Município não encontrado na base. Verifique o nome (escolha da lista de sugestões).','erro'); return; }
+        const r=await rpc('inserir_oficio',{p_token:SESSAO.token,p:{municipio_id:alvo.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido}});
+        alvo.oficios.push({id:r.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido,atendido_flag:(p.atendido||'').trim()?'SIM':'NÃO'});
+      }
+      aposGravar('Registrado com sucesso.');
+    }catch(e){ toast(e.texto||e.message,'erro'); }
+  });
+}
+function excluirOficio(id){
+  const achado=acharOficioPorId(id); if(!achado) return;
+  confirmarAcao(`Excluir o ofício "${achado.oficio.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
+    try{ await rpc('excluir_oficio',{p_token:SESSAO.token,p_id:id}); achado.municipio.oficios=achado.municipio.oficios.filter(o=>o.id!==id); aposGravar('Ofício excluído.'); }
+    catch(e){ toast(e.texto||e.message,'erro'); }
+  }, {titulo:'Confirmar exclusão', label:'Excluir'});
+}
+
+// ---------- MUNICÍPIO: novo / editar / excluir (gestor) ----------
+function abrirFormMunicipio(nomeExistente){
+  const editando = !!nomeExistente;
+  const m = editando ? acharMunicipioPorNome(nomeExistente) : null;
+  if(editando && !m){ toast('Município não encontrado.','erro'); return; }
+  const p=(m&&m.prefeito)||{}, v=(m&&m.vice_prefeito)||{}, pc=(m&&m.presidente_camara)||{};
+  const val = x => x==null?'':x;
+  const corpo = `<h2>${editando?'Editar dados do município':'Novo município'}</h2>
+  <form id="f-municipio" class="form-grid">
+    <label>Nome do município<input id="fm-nome" value="${esc(m?tituloCase(m.municipio):'')}" required></label>
+    <label>Região<input id="fm-regiao" value="${esc(val(m&&m.regiao))}"></label>
+    <label>População<input id="fm-populacao" type="number" value="${val(m&&m.populacao)}"></label>
+    <label>Eleitores 2024<input id="fm-eleitores" type="number" value="${val(m&&m.eleitores_2024)}"></label>
+    <label>IDH<input id="fm-idh" type="number" step="0.001" value="${val(m&&m.idh)}"></label>
+    <label>Aniversário da cidade<input id="fm-aniversario" value="${esc(val(m&&m.aniversario))}"></label>
+    <h3>Prefeito(a)</h3>
+    <label>Nome<input id="fm-pref-nome" value="${esc(val(p.nome))}"></label>
+    <label>Partido<input id="fm-pref-partido" value="${esc(val(p.partido))}"></label>
+    <label>Telefones (separados por vírgula)<input id="fm-pref-telefones" value="${esc((p.telefones||[]).join(', '))}"></label>
+    <label>E-mail<input id="fm-pref-email" type="email" value="${esc(val(p.email))}"></label>
+    <h3>Primeira-dama / cônjuge</h3>
+    <label class="grow">Texto<input id="fm-primeira-dama" value="${esc(val(m&&(typeof m.primeira_dama==='string'?m.primeira_dama:'')))}"></label>
+    <h3>Vice-prefeito(a)</h3>
+    <label>Nome<input id="fm-vice-nome" value="${esc(val(v.nome))}"></label>
+    <label>Partido<input id="fm-vice-partido" value="${esc(val(v.partido))}"></label>
+    <label>Telefones<input id="fm-vice-telefones" value="${esc((v.telefones||[]).join(', '))}"></label>
+    <h3>Presidente da Câmara</h3>
+    <label>Nome<input id="fm-pcam-nome" value="${esc(val(pc.nome))}"></label>
+    <label>Partido<input id="fm-pcam-partido" value="${esc(val(pc.partido))}"></label>
+    <label>Telefones<input id="fm-pcam-telefones" value="${esc((pc.telefones||[]).join(', '))}"></label>
+    <h3>PSD e política</h3>
+    <label class="grow">Secretário(a) de Saúde<input id="fm-sec-saude" value="${esc(val(m&&m.secretario_saude))}"></label>
+    <label class="grow">Presidente do PSD<input id="fm-psd-presidente" value="${esc(val(m&&m.psd_presidente))}"></label>
+    <label class="grow">Representantes PSD (texto)<input id="fm-psd-repr-texto" value="${esc(val(m&&m.psd_representantes_texto))}"></label>
+    <label>Representantes PSD (nº)<input id="fm-psd-repr-num" type="number" value="${val(m&&m.psd_representantes)}"></label>
+    <label class="grow">Vereador(es) PSD<input id="fm-vereadores-psd" value="${esc(val(m&&m.vereadores_psd))}"></label>
+    <label class="grow">Deputado federal parceiro<input id="fm-dep-federal" value="${esc(val(m&&m.dep_federal))}"></label>
+    <label class="grow">Deputado estadual parceiro<input id="fm-dep-estadual" value="${esc(val(m&&m.dep_estadual))}"></label>
+    <label class="grow">Companheiros<textarea id="fm-companheiros" rows="2">${esc(val(m&&m.companheiros))}</textarea></label>
+    <label class="grow">Eleição 2020<textarea id="fm-eleicao-2020" rows="2">${esc(val(m&&m.eleicao_2020))}</textarea></label>
+    <label class="grow">Eleição 2024<textarea id="fm-eleicao-2024" rows="2">${esc(val(m&&m.eleicao_2024))}</textarea></label>
+    <label class="grow">Observações (uma por linha)<textarea id="fm-observacoes" rows="3">${esc((m&&m.observacoes||[]).join('\n'))}</textarea></label>
+    <div class="form-acoes"><button type="button" class="btn" id="fm-cancelar">Cancelar</button><button type="submit" class="btn primary">Continuar</button></div>
+  </form>`;
+  abrirModal(corpo);
+  $('#fm-cancelar').addEventListener('click', fecharModal);
+  $('#f-municipio').addEventListener('submit', ev=>{
+    ev.preventDefault();
+    const tel=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+    const num=sel=>{ const v=$(sel).value; return v===''?null:Number(v); };
+    const d = {
+      nome: $('#fm-nome').value.trim(),
+      regiao: $('#fm-regiao').value.trim(),
+      populacao: num('#fm-populacao'), eleitores_2024: num('#fm-eleitores'), idh: num('#fm-idh'),
+      aniversario: $('#fm-aniversario').value.trim(),
+      prefeito: { nome:$('#fm-pref-nome').value.trim(), partido:$('#fm-pref-partido').value.trim(), telefones:tel($('#fm-pref-telefones').value), email:$('#fm-pref-email').value.trim() },
+      primeira_dama: $('#fm-primeira-dama').value.trim(),
+      vice_prefeito: { nome:$('#fm-vice-nome').value.trim(), partido:$('#fm-vice-partido').value.trim(), telefones:tel($('#fm-vice-telefones').value) },
+      presidente_camara: { nome:$('#fm-pcam-nome').value.trim(), partido:$('#fm-pcam-partido').value.trim(), telefones:tel($('#fm-pcam-telefones').value) },
+      secretario_saude: $('#fm-sec-saude').value.trim(),
+      psd_presidente: $('#fm-psd-presidente').value.trim(),
+      psd_representantes_texto: $('#fm-psd-repr-texto').value.trim(),
+      psd_representantes: num('#fm-psd-repr-num'),
+      vereadores_psd: $('#fm-vereadores-psd').value.trim(),
+      dep_federal: $('#fm-dep-federal').value.trim(),
+      dep_estadual: $('#fm-dep-estadual').value.trim(),
+      companheiros: $('#fm-companheiros').value.trim(),
+      eleicao_2020: $('#fm-eleicao-2020').value.trim(),
+      eleicao_2024: $('#fm-eleicao-2024').value.trim(),
+      observacoes: $('#fm-observacoes').value.split('\n').map(s=>s.trim()).filter(Boolean),
+    };
+    if(!d.nome){ toast('Informe o nome do município.','erro'); return; }
+    confirmarMunicipio(d, editando?nomeExistente:null);
+  });
+}
+function confirmarMunicipio(d, nomeAnterior){
+  const linhas=[['Nome',tituloCase(d.nome)],['Região',d.regiao||'—'],['População',d.populacao??'—'],['Eleitores 2024',d.eleitores_2024??'—'],['Prefeito(a)',d.prefeito.nome?tituloCase(d.prefeito.nome)+(d.prefeito.partido?' ('+d.prefeito.partido+')':''):'—']];
+  const corpo=`<h2>Confira antes de gravar</h2><dl class="kv confirm">${linhas.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(String(v))}</dd>`).join('')}</dl><p class="small muted">Os demais campos preenchidos também serão gravados.</p>
+  <div class="form-acoes"><button type="button" class="btn" id="cfm-voltar">Voltar e corrigir</button><button type="button" class="btn ok" id="cfm-confirmar">Confirmar e gravar</button></div>`;
+  abrirModal(corpo);
+  $('#cfm-voltar').addEventListener('click', ()=>abrirFormMunicipio(nomeAnterior));
+  $('#cfm-confirmar').addEventListener('click', async ()=>{
+    const nomeFinal = d.nome.toUpperCase();
+    const { nome, regiao, ...dadosRest } = d;
+    try{
+      if(nomeAnterior){
+        const alvo = acharMunicipioPorNome(nomeAnterior);
+        if(!alvo){ toast('Município não encontrado.','erro'); return; }
+        await rpc('atualizar_municipio',{p_token:SESSAO.token,p_id:alvo.id,p:{nome:nomeFinal, regiao, dados:dadosRest}});
+        alvo.municipio = nomeFinal; alvo.regiao = regiao; Object.assign(alvo, dadosRest);
+        if(estado.mun===nomeAnterior) estado.mun=nomeFinal;
+      } else {
+        const r = await rpc('inserir_municipio',{p_token:SESSAO.token,p:{nome:nomeFinal, regiao, tipo:'municipio', dados:dadosRest}});
+        DADOS.push(Object.assign({id:r.id, municipio:nomeFinal, tipo:'municipio', regiao, emendas:[], oficios:[]}, dadosRest));
+      }
+      aposGravar('Município gravado com sucesso.');
+    }catch(e){ toast(e.texto||e.message,'erro'); }
+  });
+}
+function excluirMunicipio(nome){
+  const m=acharMunicipioPorNome(nome); if(!m) return;
+  confirmarAcao(`Excluir o município ${tituloCase(m.municipio)} e todos os seus registros (emendas e ofícios)? Esta ação não pode ser desfeita.`, async ()=>{
+    try{
+      await rpc('excluir_municipio',{p_token:SESSAO.token,p_id:m.id});
+      DADOS=DADOS.filter(x=>x.id!==m.id);
+      if(estado.mun===nome) estado.mun=null;
+      recalcular(); fecharModal(); toast('Município excluído.');
+      if(!estado.mun) go('municipios'); else render();
+    }catch(e){ toast(e.texto||e.message,'erro'); }
+  }, {titulo:'Confirmar exclusão', label:'Excluir'});
+}
+
+// ---------- trocar senha (botão do cabeçalho) ----------
+function abrirTrocarSenha(){
+  const corpo=`<h2>Trocar senha</h2><form id="f-trocar-senha" class="form-grid">
+    <label>Nova senha<input id="ts-nova" type="password" required></label>
+    <label>Repetir nova senha<input id="ts-nova2" type="password" required></label>
+    <div id="ts-erro" class="form-erro hidden"></div>
+    <div class="form-acoes"><button type="button" class="btn" id="ts-cancelar">Cancelar</button><button type="submit" class="btn primary">Salvar</button></div>
+  </form>`;
+  abrirModal(corpo);
+  $('#ts-cancelar').addEventListener('click', fecharModal);
+  $('#f-trocar-senha').addEventListener('submit', async ev=>{
+    ev.preventDefault();
+    const n1=$('#ts-nova').value, n2=$('#ts-nova2').value;
+    if(n1!==n2){ mostrarErroForm('ts-erro','As senhas não coincidem.'); return; }
+    if(!n1||n1==='12345'){ mostrarErroForm('ts-erro','A senha não pode ser vazia nem "12345".'); return; }
+    try{ await rpc('trocar_senha',{p_token:SESSAO.token,p_nova:n1}); SESSAO.usuario.precisa_trocar=false; fecharModal(); toast('Senha alterada.'); }
+    catch(e){ mostrarErroForm('ts-erro', e.texto||e.message); }
+  });
+}
+
+// ---------- cabeçalho / permissões na tela ----------
+function renderCabecalho(){
+  if(!SESSAO) return;
+  const u=SESSAO.usuario;
+  $('#userbox').innerHTML = `<span class="userinfo">${esc(u.nome)} <span style="opacity:.75">(${rotuloPapel(u.papel)})</span></span>
+    <button class="btn sm" id="btn-trocar-senha" type="button">Trocar senha</button>
+    <button class="btn sm" id="btn-sair" type="button">Sair</button>`;
+  $('#btn-trocar-senha').addEventListener('click', abrirTrocarSenha);
+  $('#btn-sair').addEventListener('click', sair);
+  $$('.so-gestor').forEach(el=>el.classList.toggle('hidden', u.papel!=='gestor'));
+}
+
+// ---------- render (despacho por aba) ----------
+function render(){
+  if(estado.mun){ if(byName[estado.mun]) renderFicha(byName[estado.mun]); else { estado.mun=null; renderPainel(); } return; }
+  ({painel:renderPainel,municipios:renderMunicipios,emendas:renderEmendas,oficios:renderOficios,contatos:renderContatos,busca:renderBusca,usuarios:renderUsuarios,auditoria:renderAuditoria}[estado.tab]||renderPainel)();
+}
+
+// ---------- overlays de tela cheia ----------
+function mostrarOverlay(id){ ['login-overlay','troca-overlay','carregando'].forEach(o=>{ const el=$('#'+o); if(el) el.classList.toggle('hidden', o!==id); }); }
+function esconderOverlays(){ mostrarOverlay(null); }
+function mostrarLogin(msgErro){ esconderOverlays(); mostrarOverlay('login-overlay'); if(msgErro) mostrarErroForm('li-erro', msgErro); }
+
+// ---------- carregar dados após login ----------
+async function carregarTudo(){
+  mostrarOverlay('carregando');
+  try{
+    const arr = await rpc('carregar_dados', {p_token:SESSAO.token});
+    DADOS = arr;
+    recalcular();
+    esconderOverlays();
+    renderCabecalho();
+    go('painel');
+  }catch(e){
+    esconderOverlays();
+    if(!(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA')) toast(e.texto||e.message,'erro');
+  }
+}
+
+// ---------- login / sessão / sair ----------
+$('#form-login').addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const login=$('#li-login').value.trim(), senha=$('#li-senha').value;
+  $('#li-erro').classList.add('hidden');
+  if(!login||!senha) return;
+  try{
+    const r = await rpc('login',{p_login:login,p_senha:senha});
+    localStorage.setItem('cmgo_token', r.token);
+    SESSAO = {token:r.token, usuario:r.usuario};
+    if(SESSAO.usuario.precisa_trocar){ mostrarOverlay('troca-overlay'); }
+    else { await carregarTudo(); }
+  }catch(e){ mostrarErroForm('li-erro', e.texto||e.message||'Não foi possível entrar.'); }
+});
+$('#form-troca-obrig').addEventListener('submit', async ev=>{
+  ev.preventDefault();
+  const n1=$('#to-nova').value, n2=$('#to-nova2').value;
+  if(n1!==n2){ mostrarErroForm('to-erro','As senhas não coincidem.'); return; }
+  if(!n1||n1==='12345'){ mostrarErroForm('to-erro','A senha não pode ser vazia nem "12345".'); return; }
+  try{ await rpc('trocar_senha',{p_token:SESSAO.token,p_nova:n1}); SESSAO.usuario.precisa_trocar=false; await carregarTudo(); }
+  catch(e){ mostrarErroForm('to-erro', e.texto||e.message); }
+});
+async function sair(){
+  try{ if(SESSAO) await rpc('sair',{p_token:SESSAO.token}); }catch(e){}
+  localStorage.removeItem('cmgo_token');
+  location.reload();
+}
+
+// ---------- inicialização ----------
+async function iniciar(){
+  const token = localStorage.getItem('cmgo_token');
+  if(!token){ mostrarLogin(); return; }
+  mostrarOverlay('carregando');
+  try{
+    const r = await rpc('sessao', {p_token:token});
+    SESSAO = {token, usuario:r.usuario};
+    if(SESSAO.usuario.precisa_trocar){ mostrarOverlay('troca-overlay'); return; }
+    await carregarTudo();
+  }catch(e){
+    localStorage.removeItem('cmgo_token');
+    mostrarLogin();
+  }
+}
+iniciar();
+</script>
+</body>
+</html>
+
+
