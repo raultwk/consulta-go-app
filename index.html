@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Consulta Municípios GO</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#345da8">
+<link rel="apple-touch-icon" href="./icones/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vanderlan GO">
 <style>
 :root{
   /* identidade Vanderlan Cardoso — ver docs/memoria/06-design.md */
@@ -26,9 +33,13 @@ input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px 
 input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .hidden{display:none!important}
 .assinatura{font-family:Georgia,'Times New Roman',serif;font-style:italic;color:var(--ouro);letter-spacing:.2px}
-.rodape{max-width:1320px;margin:26px auto 4px;padding:14px 18px 22px;display:flex;justify-content:center;align-items:center}
+.rodape{max-width:1320px;margin:26px auto 4px;padding:14px 18px 22px;display:flex;flex-direction:column;gap:4px;justify-content:center;align-items:center}
 .rodape .assinatura{font-size:13px}
+.rodape .info-atualizacao{font-size:12px;color:var(--ink-3)}
 @media print{.rodape{display:none}}
+
+/* faixa amarela de "sem internet" */
+.faixa-offline{background:#fff3d6;color:#5b4700;text-align:center;font-size:13px;font-weight:600;padding:7px 10px;border-bottom:1px solid #f1dc9c;position:sticky;top:0;z-index:21}
 
 /* topo */
 header.top{position:sticky;top:0;z-index:20;background:var(--azul);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}
@@ -237,8 +248,9 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 .form-erro{background:var(--crit-bg);color:var(--crit);border-radius:8px;padding:9px 11px;font-size:13.5px}
 
 /* topo: usuário logado */
-.userbox{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;margin-left:auto}
+.userbox{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;margin-left:auto;flex-wrap:wrap}
 .userbox .userinfo{white-space:nowrap}
+.userbox .atualizacao{font-size:11.5px;opacity:.85;white-space:nowrap}
 .userbox .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff}
 .userbox .btn:hover{background:rgba(255,255,255,.22);color:#fff}
 
@@ -308,6 +320,7 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 </head>
 <body>
 <div id="toasts" class="toasts"></div>
+<div id="faixa-offline" class="faixa-offline hidden"></div>
 
 <div id="login-overlay" class="overlay-full azul hidden">
   <img class="logo-marca logo-login" alt="Senador Vanderlan Cardoso">
@@ -352,7 +365,7 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
   <div class="userbox" id="userbox"></div>
 </div></header>
 <main id="app"></main>
-<footer class="rodape"><span class="assinatura">by Raul Jardim</span></footer>
+<footer class="rodape"><span id="rodape-atualizacao" class="info-atualizacao"></span><span class="assinatura">by Raul Jardim</span></footer>
 <div id="tip" class="tip hidden"></div>
 <datalist id="dl-municipios"></datalist>
 <datalist id="dl-ministerios"></datalist>
@@ -427,6 +440,47 @@ async function rpc(fn, args={}){
   return j;
 }
 
+// ---------- tempo limite para chamadas à rede ----------
+function comTempoLimite(promessa, ms=8000){
+  return Promise.race([
+    promessa,
+    new Promise((_,rej)=>setTimeout(()=>rej(new RpcError('SEM_CONEXAO','Tempo esgotado. Confira sua internet.')), ms))
+  ]);
+}
+
+// ---------- dados salvos no aparelho (IndexedDB) para uso sem internet ----------
+const IDB_NOME='cmgo', IDB_VERSAO=1, IDB_STORE='cache';
+function abrirIDB(){
+  return new Promise((resolve,reject)=>{
+    if(!window.indexedDB){ reject(new Error('sem indexedDB')); return; }
+    const req = indexedDB.open(IDB_NOME, IDB_VERSAO);
+    req.onupgradeneeded = () => { const db=req.result; if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE,{keyPath:'chave'}); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbSalvar(registro){
+  try{
+    const db = await abrirIDB();
+    await new Promise((resolve,reject)=>{
+      const tx = db.transaction(IDB_STORE,'readwrite');
+      tx.objectStore(IDB_STORE).put(registro);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+  }catch(e){ /* aparelho sem IndexedDB (ex.: navegação privada) — segue sem salvar */ }
+}
+async function idbLer(chave){
+  try{
+    const db = await abrirIDB();
+    return await new Promise((resolve,reject)=>{
+      const tx = db.transaction(IDB_STORE,'readonly');
+      const req = tx.objectStore(IDB_STORE).get(chave);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }catch(e){ return null; }
+}
+
 // ---------- sessão ----------
 let SESSAO = null; // {token, usuario:{id,login,nome,papel,precisa_trocar}}
 function souGestor(){ return !!(SESSAO && SESSAO.usuario.papel==='gestor'); }
@@ -443,6 +497,30 @@ function rotuloPapel(p){ return {gestor:'Responsável',inseridor:'Quem insere da
 let DADOS=[], MUNS=[], EMENDAS=[], OFICIOS=[], byName={}, CONTATOS=[];
 let OPCOES = {municipio:[],ministerio:[],ano:[],situacao:[],regiao:[],atendido:['SIM','NÃO'],partido:[],psd:['TEM','NÃO TEM'],cargo:[]};
 let SETS = {};
+
+// ---------- modo sem internet / "informação atualizada dia..." ----------
+let OFFLINE = false;          // true = mostrando dados salvos no aparelho (sem internet agora)
+let ULTIMA_ATUALIZACAO = null; // Date da última vez que os dados vieram com sucesso do servidor
+function fmtDataHora(d){
+  if(!d) return '';
+  const p = n => String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} às ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function textoAtualizacao(){
+  if(!ULTIMA_ATUALIZACAO) return '';
+  return `Informação atualizada dia ${fmtDataHora(ULTIMA_ATUALIZACAO)}${OFFLINE?' · sem internet':''}`;
+}
+function atualizarFaixaOffline(){
+  const el = $('#faixa-offline'); if(!el) return;
+  if(OFFLINE){ el.textContent = `Sem internet · mostrando dados de ${ULTIMA_ATUALIZACAO?fmtDataHora(ULTIMA_ATUALIZACAO):'—'}`; el.classList.remove('hidden'); }
+  else { el.classList.add('hidden'); el.textContent=''; }
+}
+function atualizarRodape(){ const el=$('#rodape-atualizacao'); if(el) el.textContent = textoAtualizacao(); }
+// bloqueia (e avisa) ações que gravam quando o aparelho está sem internet
+function bloqueadoSemInternet(){
+  if(OFFLINE || !navigator.onLine){ toast('Precisa de internet para gravar.','erro'); return true; }
+  return false;
+}
 function recalcular(){
   DADOS.forEach(m=>{
     m.emendas = m.emendas||[];
@@ -866,6 +944,7 @@ function desenharUsuarios(){
   </tbody></table></div>`;
 }
 function abrirFormUsuario(){
+  if(bloqueadoSemInternet()) return;
   const corpo=`<h2>Novo acesso</h2><form id="f-usuario" class="form-grid">
     <label>Nome<input id="fu-nome" required></label>
     <label>Acesso<input id="fu-login" required placeholder="ex.: joao.silva"></label>
@@ -887,6 +966,7 @@ function abrirFormUsuario(){
   });
 }
 function abrirFormAlterarUsuario(id){
+  if(bloqueadoSemInternet()) return;
   const u=USUARIOS.find(x=>x.id===id); if(!u) return;
   const corpo=`<h2>Alterar usuário</h2><form id="f-alt-usuario" class="form-grid">
     <label>Nome<input id="au-nome" value="${esc(u.nome)}" required></label>
@@ -903,6 +983,7 @@ function abrirFormAlterarUsuario(id){
   });
 }
 function redefinirSenha(id){
+  if(bloqueadoSemInternet()) return;
   const u=USUARIOS.find(x=>x.id===id); if(!u) return;
   confirmarAcao(`Redefinir a senha de ${u.nome} (${u.login}) para 12345?`, async ()=>{
     try{ const r=await rpc('redefinir_senha',{p_token:SESSAO.token,p_id:id}); u.precisa_trocar=true; fecharModal(); abrirModalCredenciais(r.login, r.senha); }
@@ -910,6 +991,7 @@ function redefinirSenha(id){
   }, {titulo:'Redefinir senha', label:'Redefinir', perigo:false});
 }
 function alternarAtivoUsuario(id){
+  if(bloqueadoSemInternet()) return;
   const u=USUARIOS.find(x=>x.id===id); if(!u) return;
   const novo=!u.ativo;
   confirmarAcao(`${novo?'Ativar':'Desativar'} o acesso de ${u.nome}?`, async ()=>{
@@ -918,6 +1000,7 @@ function alternarAtivoUsuario(id){
   }, {titulo:novo?'Ativar acesso':'Desativar acesso', label:novo?'Ativar':'Desativar', perigo:!novo});
 }
 function removerUsuario(id){
+  if(bloqueadoSemInternet()) return;
   const u=USUARIOS.find(x=>x.id===id); if(!u) return;
   confirmarAcao(`Remover definitivamente o acesso de ${u.nome} (${u.login})?`, async ()=>{
     try{ await rpc('remover_usuario',{p_token:SESSAO.token,p_id:id}); USUARIOS=USUARIOS.filter(x=>x.id!==id); fecharModal(); toast('Usuário removido.'); desenharUsuarios(); }
@@ -989,6 +1072,7 @@ function aposGravar(msg){ recalcular(); fecharModal(); toast(msg); render(); }
 
 // ---------- EMENDA: inserir / editar (com confirmação obrigatória) ----------
 function abrirFormEmenda(municipioSugerido, emendaId){
+  if(bloqueadoSemInternet()) return;
   const editando = emendaId!=null;
   let mun=null, dados={municipio:municipioSugerido||'', ministerio:'', ano:String(new Date().getFullYear()), objeto:'', valor:'', situacao:''};
   if(editando){
@@ -1039,6 +1123,7 @@ function confirmarEmenda(p, emendaId){
   });
 }
 function excluirEmenda(id){
+  if(bloqueadoSemInternet()) return;
   const achado=acharEmendaPorId(id); if(!achado) return;
   confirmarAcao(`Excluir a emenda "${achado.emenda.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
     try{ await rpc('excluir_emenda',{p_token:SESSAO.token,p_id:id}); achado.municipio.emendas=achado.municipio.emendas.filter(e=>e.id!==id); aposGravar('Emenda excluída.'); }
@@ -1048,6 +1133,7 @@ function excluirEmenda(id){
 
 // ---------- OFÍCIO: inserir / editar (com confirmação obrigatória) ----------
 function abrirFormOficio(municipioSugerido, oficioId){
+  if(bloqueadoSemInternet()) return;
   const editando = oficioId!=null;
   let mun=null, dados={municipio:municipioSugerido||'', ministerio:'', ano:String(new Date().getFullYear()), objeto:'', valor_solicitado:'', recebido:'', data_recebido:'', solicitante:'', atendido:''};
   if(editando){
@@ -1101,6 +1187,7 @@ function confirmarOficio(p, oficioId){
   });
 }
 function excluirOficio(id){
+  if(bloqueadoSemInternet()) return;
   const achado=acharOficioPorId(id); if(!achado) return;
   confirmarAcao(`Excluir o ofício "${achado.oficio.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
     try{ await rpc('excluir_oficio',{p_token:SESSAO.token,p_id:id}); achado.municipio.oficios=achado.municipio.oficios.filter(o=>o.id!==id); aposGravar('Ofício excluído.'); }
@@ -1110,6 +1197,7 @@ function excluirOficio(id){
 
 // ---------- MUNICÍPIO: novo / editar / excluir (gestor) ----------
 function abrirFormMunicipio(nomeExistente){
+  if(bloqueadoSemInternet()) return;
   const editando = !!nomeExistente;
   const m = editando ? acharMunicipioPorNome(nomeExistente) : null;
   if(editando && !m){ toast('Município não encontrado.','erro'); return; }
@@ -1208,6 +1296,7 @@ function confirmarMunicipio(d, nomeAnterior){
   });
 }
 function excluirMunicipio(nome){
+  if(bloqueadoSemInternet()) return;
   const m=acharMunicipioPorNome(nome); if(!m) return;
   confirmarAcao(`Excluir o município ${tituloCase(m.municipio)} e todos os seus registros (emendas e ofícios)? Esta ação não pode ser desfeita.`, async ()=>{
     try{
@@ -1222,6 +1311,7 @@ function excluirMunicipio(nome){
 
 // ---------- trocar senha (botão do cabeçalho) ----------
 function abrirTrocarSenha(){
+  if(bloqueadoSemInternet()) return;
   const corpo=`<h2>Trocar senha</h2><form id="f-trocar-senha" class="form-grid">
     <label>Nova senha<input id="ts-nova" type="password" required></label>
     <label>Repetir nova senha<input id="ts-nova2" type="password" required></label>
@@ -1245,11 +1335,16 @@ function renderCabecalho(){
   if(!SESSAO) return;
   const u=SESSAO.usuario;
   $('#userbox').innerHTML = `<span class="userinfo">${esc(u.nome)} <span style="opacity:.75">(${rotuloPapel(u.papel)})</span></span>
+    <span class="atualizacao" id="userbox-atualizacao">${esc(textoAtualizacao())}</span>
+    <button class="btn sm" id="btn-atualizar-agora" type="button" title="Buscar informação mais nova agora">↻ Atualizar agora</button>
     <button class="btn sm" id="btn-trocar-senha" type="button">Trocar senha</button>
     <button class="btn sm" id="btn-sair" type="button">Sair</button>`;
+  $('#btn-atualizar-agora').addEventListener('click', atualizarAgora);
   $('#btn-trocar-senha').addEventListener('click', abrirTrocarSenha);
   $('#btn-sair').addEventListener('click', sair);
   $$('.so-gestor').forEach(el=>el.classList.toggle('hidden', u.papel!=='gestor'));
+  atualizarRodape();
+  atualizarFaixaOffline();
 }
 
 // ---------- render (despacho por aba) ----------
@@ -1267,16 +1362,81 @@ function mostrarLogin(msgErro){ esconderOverlays(); mostrarOverlay('login-overla
 async function carregarTudo(){
   mostrarOverlay('carregando');
   try{
-    const arr = await rpc('carregar_dados', {p_token:SESSAO.token});
+    if(!navigator.onLine) throw new RpcError('SEM_CONEXAO','Sem internet.');
+    const arr = await comTempoLimite(rpc('carregar_dados', {p_token:SESSAO.token}), 8000);
     DADOS = arr;
     recalcular();
+    ULTIMA_ATUALIZACAO = new Date();
+    OFFLINE = false;
+    idbSalvar({chave:'dados', dados:arr, quando:ULTIMA_ATUALIZACAO.toISOString(), usuario:SESSAO.usuario});
     esconderOverlays();
     renderCabecalho();
     go('painel');
   }catch(e){
-    esconderOverlays();
-    if(!(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA')) toast(e.texto||e.message,'erro');
+    if(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA'){ esconderOverlays(); return; }
+    const usadoCache = await tentarUsarCache(SESSAO.token);
+    if(!usadoCache){ esconderOverlays(); toast(e.texto||e.message,'erro'); }
   }
+}
+
+// ---------- usar dados salvos no aparelho (sem internet) ----------
+async function tentarUsarCache(token){
+  const reg = await idbLer('dados');
+  const usuario = (SESSAO && SESSAO.usuario) || (reg && reg.usuario);
+  if(!reg || !reg.dados || !usuario) return false;
+  SESSAO = {token, usuario};
+  DADOS = reg.dados;
+  recalcular();
+  ULTIMA_ATUALIZACAO = reg.quando ? new Date(reg.quando) : null;
+  OFFLINE = true;
+  esconderOverlays();
+  renderCabecalho();
+  go('painel');
+  return true;
+}
+
+// ---------- re-sincronizar (botão "Atualizar agora", voltar internet, voltar ao app) ----------
+async function sincronizar(manual){
+  if(!SESSAO) return;
+  if(manual) toast('Atualizando…');
+  try{
+    if(!navigator.onLine) throw new RpcError('SEM_CONEXAO','Sem internet.');
+    const arr = await comTempoLimite(rpc('carregar_dados', {p_token:SESSAO.token}), 8000);
+    DADOS = arr;
+    recalcular();
+    ULTIMA_ATUALIZACAO = new Date();
+    OFFLINE = false;
+    idbSalvar({chave:'dados', dados:arr, quando:ULTIMA_ATUALIZACAO.toISOString(), usuario:SESSAO.usuario});
+    renderCabecalho();
+    if(estado.mun && !byName[estado.mun]) estado.mun=null;
+    render();
+    toast('Informação atualizada.');
+  }catch(e){
+    if(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA') return;
+    OFFLINE = true;
+    renderCabecalho();
+    if(manual) toast('Não foi possível atualizar agora. Confira sua internet.','erro');
+  }
+}
+function atualizarAgora(){ sincronizar(true); }
+function ligarEventosRede(){
+  window.addEventListener('online', () => { if(SESSAO) sincronizar(false); });
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState!=='visible' || !SESSAO || !navigator.onLine) return;
+    const passouTempo = !ULTIMA_ATUALIZACAO || (Date.now()-ULTIMA_ATUALIZACAO.getTime()) > 10*60*1000;
+    if(passouTempo) sincronizar(false);
+  });
+}
+
+// ---------- app instalável: registro do service worker ----------
+function registrarSW(){
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if(sessionStorage.getItem('cmgo_sw_recarregou')) return;
+    sessionStorage.setItem('cmgo_sw_recarregou','1');
+    location.reload();
+  });
 }
 
 // ---------- login / sessão / sair ----------
@@ -1309,17 +1469,24 @@ async function sair(){
 
 // ---------- inicialização ----------
 async function iniciar(){
+  registrarSW();
+  ligarEventosRede();
   const token = localStorage.getItem('cmgo_token');
-  if(!token){ mostrarLogin(); return; }
+  if(!token){
+    mostrarLogin(navigator.onLine ? null : 'Sem internet. Entre com internet pelo menos uma vez neste aparelho para usar sem sinal.');
+    return;
+  }
   mostrarOverlay('carregando');
   try{
-    const r = await rpc('sessao', {p_token:token});
+    if(!navigator.onLine) throw new RpcError('SEM_CONEXAO','Sem internet.');
+    const r = await comTempoLimite(rpc('sessao', {p_token:token}), 8000);
     SESSAO = {token, usuario:r.usuario};
     if(SESSAO.usuario.precisa_trocar){ mostrarOverlay('troca-overlay'); return; }
     await carregarTudo();
   }catch(e){
-    localStorage.removeItem('cmgo_token');
-    mostrarLogin();
+    if(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA'){ localStorage.removeItem('cmgo_token'); mostrarLogin(); return; }
+    const usadoCache = await tentarUsarCache(token);
+    if(!usadoCache) mostrarLogin();
   }
 }
 iniciar();
