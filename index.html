@@ -1053,6 +1053,10 @@ function removerUsuario(id){
     catch(e){ toast(e.texto||e.message,'erro'); }
   }, {titulo:'Remover acesso', label:'Remover'});
 }
+async function copiarTexto(texto){
+  try{ await navigator.clipboard.writeText(texto); return true; }
+  catch(e){ try{ const ta=document.createElement('textarea'); ta.value=texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); return true; }catch(e2){ return false; } }
+}
 function abrirModalCredenciais(login, senha){
   const link = location.href.split('#')[0];
   const texto = `Sistema: ${link}\nAcesso: ${login}\nSenha: ${senha}\nNo primeiro acesso o sistema pede para criar uma senha nova.`;
@@ -1063,28 +1067,11 @@ function abrirModalCredenciais(login, senha){
       <button type="button" class="btn" id="cred-copiar">Copiar dados</button>
       <button type="button" class="btn primary" id="cred-whats">Enviar por WhatsApp</button>
     </div>
-    <div id="cred-whats-area" class="hidden" style="margin-top:12px">
-      <label>Telefone (DDD + número)<input id="cred-tel" type="tel" placeholder="62999998888"></label>
-      <div class="form-acoes" style="margin-top:8px">
-        <button type="button" class="btn" id="cred-agenda">Escolher da agenda</button>
-        <button type="button" class="btn primary" id="cred-abrir-whats">Abrir WhatsApp</button>
-      </div>
-    </div>
+    <p class="small muted">O WhatsApp abre para você escolher a pessoa e enviar.</p>
     <div class="form-acoes" style="margin-top:14px"><button type="button" class="btn" id="cred-fechar">Fechar</button></div>`;
   abrirModal(corpo);
-  $('#cred-copiar').addEventListener('click', async ()=>{
-    try{ await navigator.clipboard.writeText(texto); toast('Dados copiados.'); }
-    catch(e){ try{ const ta=document.createElement('textarea'); ta.value=texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Dados copiados.'); }catch(e2){ toast('Não foi possível copiar automaticamente.','erro'); } }
-  });
-  $('#cred-whats').addEventListener('click', ()=> $('#cred-whats-area').classList.remove('hidden'));
-  const abrirWhats = d => { if(d.length<10){ toast('Telefone inválido.','erro'); return; } window.open('https://wa.me/55'+d+'?text='+encodeURIComponent(texto),'_blank'); };
-  if(navigator.contacts && navigator.contacts.select){
-    $('#cred-agenda').addEventListener('click', async ()=>{
-      try{ const sel=await navigator.contacts.select(['tel'],{multiple:false}); const c=sel&&sel[0]; const tel=c&&c.tel&&c.tel[0]; if(tel){ const d=tel.replace(/\D/g,''); $('#cred-tel').value=d; abrirWhats(d); } }
-      catch(e){}
-    });
-  } else { const ag=$('#cred-agenda'); if(ag) ag.classList.add('hidden'); }
-  $('#cred-abrir-whats').addEventListener('click', ()=> abrirWhats($('#cred-tel').value.replace(/\D/g,'')));
+  $('#cred-copiar').addEventListener('click', async ()=>{ const ok=await copiarTexto(texto); toast(ok?'Dados copiados.':'Não foi possível copiar automaticamente.', ok?undefined:'erro'); });
+  $('#cred-whats').addEventListener('click', async ()=>{ await copiarTexto(texto); window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank'); });
   $('#cred-fechar').addEventListener('click', fecharModal);
 }
 
