@@ -47,9 +47,10 @@ header.top{position:sticky;top:0;z-index:20;background:var(--azul);color:#fff;bo
 .brand{display:flex;align-items:center;gap:10px;line-height:1.15;min-width:0}
 .logo-marca{height:40px;width:auto;display:block;border-radius:4px;flex:none}
 .brand b{font-size:16px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.menu-toggle{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.32);color:#fff;min-height:44px;padding:8px 14px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
-.menu-toggle:hover{background:rgba(255,255,255,.24);color:#fff}
-.menu-toggle .seta{display:inline-block}
+.menu-toggle{background:#fff;border:0;min-height:44px;min-width:44px;padding:0;display:flex;align-items:center;justify-content:center;flex:none;border-radius:8px}
+.menu-toggle:hover{background:#f0f0f0}
+.menu-toggle .sanduiche{display:flex;flex-direction:column;gap:4px;width:22px}
+.menu-toggle .sanduiche span{display:block;height:3px;width:100%;background:var(--azul,#345da8);border-radius:2px}
 
 /* painel do menu (abas + busca + atualização + usuário) */
 .menu-painel{position:fixed;left:0;right:0;z-index:19;background:var(--surface);border-bottom:1px solid var(--line-2);box-shadow:0 10px 24px rgba(0,0,0,.18);padding:12px 14px 16px;max-height:calc(100vh - 54px);overflow:auto}
@@ -74,9 +75,10 @@ h3{font-size:14px;margin:18px 0 8px;color:var(--ink-2);text-transform:uppercase;
 
 /* barra de filtro global: trilha + campos */
 .fbar{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
-.fb-linha{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13.5px}
-.fb-geral{font-weight:700;color:var(--ink);white-space:nowrap;cursor:default}
-.fb-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fb-linha1{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13.5px}
+.fb-geral{font-weight:700;color:var(--ink);white-space:nowrap;cursor:default;text-transform:uppercase}
+.fb-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
+.fb-chips:empty{margin-top:0}
 .mig{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink-2);cursor:pointer;font-weight:600}
 .mig:hover{border-color:var(--accent-2);color:var(--accent)}
 .mig .k{font-weight:400;opacity:.75;margin-right:4px}
@@ -346,7 +348,7 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 
 <header class="top"><div class="wrap">
   <div class="brand"><img class="logo-marca" alt="Senador Vanderlan Cardoso"><b>Consulta Municípios GO</b></div>
-  <button type="button" id="btn-menu" class="btn menu-toggle" aria-expanded="false" aria-controls="menu-painel">Menu <span class="seta">▾</span></button>
+  <button type="button" id="btn-menu" class="btn menu-toggle" aria-expanded="false" aria-controls="menu-painel" aria-label="Abrir menu"><span class="sanduiche"><span></span><span></span><span></span></span></button>
 </div></header>
 <div id="menu-painel" class="menu-painel hidden">
   <nav class="tabs" id="tabs">
@@ -619,8 +621,8 @@ function abrirMunicipio(nome){ estado.mun=nome; render(); window.scrollTo(0,0); 
 
 // ---------- cabeçalho compacto: menu recolhido (abas, busca, atualização, usuário) ----------
 let menuAberto = false;
-function fecharMenu(){ menuAberto=false; const p=$('#menu-painel'); if(p) p.classList.add('hidden'); const b=$('#btn-menu'); if(b){ b.setAttribute('aria-expanded','false'); const s=$('.seta',b); if(s) s.textContent='▾'; } }
-function abrirMenu(){ menuAberto=true; const p=$('#menu-painel'); if(!p) return; const h=$('header.top').offsetHeight; p.style.top=h+'px'; p.classList.remove('hidden'); const b=$('#btn-menu'); if(b){ b.setAttribute('aria-expanded','true'); const s=$('.seta',b); if(s) s.textContent='▴'; } }
+function fecharMenu(){ menuAberto=false; const p=$('#menu-painel'); if(p) p.classList.add('hidden'); const b=$('#btn-menu'); if(b) b.setAttribute('aria-expanded','false'); }
+function abrirMenu(){ menuAberto=true; const p=$('#menu-painel'); if(!p) return; const h=$('header.top').offsetHeight; p.style.top=h+'px'; p.classList.remove('hidden'); const b=$('#btn-menu'); if(b) b.setAttribute('aria-expanded','true'); }
 $('#btn-menu').addEventListener('click', e=>{ e.stopPropagation(); menuAberto ? fecharMenu() : abrirMenu(); });
 document.addEventListener('click', e=>{ if(!menuAberto) return; if(e.target.closest('#menu-painel')||e.target.closest('#btn-menu')) return; fecharMenu(); });
 
@@ -679,12 +681,12 @@ function combo(id, opcoesChave, todos='Todos'){ const valor=estado.f[id]||''; re
 function barraFiltros(camposExtras=''){
   const f=estado.f, ordem=estado.ordem;
   const chips = ordem.map(k=>`<span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,f[k]))}<span class="x">✕</span></span>`).join('');
-  const linha = `<div class="fb-linha">
-    <span class="fb-geral">Painel geral</span>
-    <span class="fb-chips" id="fb-chips">${chips}</span>
+  const linha = `<div class="fb-linha1">
+    <span class="fb-geral">PAINEL GERAL</span>
     <button type="button" class="fb-toggle" id="fb-toggle" aria-expanded="${filtrosAbertos?'true':'false'}">Filtros <span class="seta">${filtrosAbertos?'▴':'▾'}</span></button>
     ${ordem.length?'<button type="button" class="fb-limpar" data-limpar-tudo>Limpar tudo</button>':''}
-  </div>`;
+  </div>
+  <div class="fb-chips" id="fb-chips">${chips}</div>`;
   const camposInt = `<div class="filters">${combo('municipio')}${combo('regiao',null,'Todas')}${combo('ministerio')}${combo('ano')}${combo('situacao',null,'Todas')}${combo('partido')}${combo('psd',null,'Tanto faz')}${camposExtras}</div>`;
   const campos = `<div id="filtros-campos" class="${filtrosAbertos?'':'hidden'}">${camposInt}</div>`;
   return `<div class="fbar" id="fbar">${linha}${campos}</div>`;
@@ -721,7 +723,7 @@ function atualizarBarra(){
   if(chipsEl) chipsEl.innerHTML = estado.ordem.map(k=>`<span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,estado.f[k]))}<span class="x">✕</span></span>`).join('');
   let btn = $('.fb-limpar', barraEl);
   if(estado.ordem.length){
-    if(!btn){ const linha=$('.fb-linha', barraEl); if(linha){ btn=document.createElement('button'); btn.type='button'; btn.className='fb-limpar'; btn.setAttribute('data-limpar-tudo',''); btn.textContent='Limpar tudo'; linha.appendChild(btn); } }
+    if(!btn){ const linha=$('.fb-linha1', barraEl); if(linha){ btn=document.createElement('button'); btn.type='button'; btn.className='fb-limpar'; btn.setAttribute('data-limpar-tudo',''); btn.textContent='Limpar tudo'; linha.appendChild(btn); } }
   } else if(btn){ btn.remove(); }
   $$('.combo', barraEl).forEach(c=>{ const inp=$('input',c); if(!inp||inp===document.activeElement) return; const id=inp.dataset.f; inp.classList.toggle('ativo', !!estado.f[id]); const lm=$('.limpa',c); if(lm) lm.style.display = estado.f[id] ? '' : 'none'; });
 }
