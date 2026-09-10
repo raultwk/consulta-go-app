@@ -640,13 +640,12 @@ document.addEventListener('click', e=>{
   const eO=e.target.closest('[data-editar-oficio]'); if(eO){ e.preventDefault(); abrirFormOficio(null, Number(eO.dataset.editarOficio)); return; }
   const xO=e.target.closest('[data-excluir-oficio]'); if(xO){ e.preventDefault(); excluirOficio(Number(xO.dataset.excluirOficio)); return; }
   const emun=e.target.closest('[data-editar-municipio]'); if(emun){ e.preventDefault(); abrirFormMunicipio(emun.dataset.editarMunicipio); return; }
-  const nmun=e.target.closest('[data-novo-municipio]'); if(nmun){ e.preventDefault(); abrirFormMunicipio(null); return; }
   const xmun=e.target.closest('[data-excluir-municipio]'); if(xmun){ e.preventDefault(); excluirMunicipio(xmun.dataset.excluirMunicipio); return; }
   const nuser=e.target.closest('[data-novo-usuario]'); if(nuser){ e.preventDefault(); abrirFormUsuario(); return; }
-  const rsen=e.target.closest('[data-redefinir-senha]'); if(rsen){ e.preventDefault(); redefinirSenha(Number(rsen.dataset.redefinirSenha)); return; }
-  const ausr=e.target.closest('[data-alterar-usuario]'); if(ausr){ e.preventDefault(); abrirFormAlterarUsuario(Number(ausr.dataset.alterarUsuario)); return; }
-  const tusr=e.target.closest('[data-ativar-usuario]'); if(tusr){ e.preventDefault(); alternarAtivoUsuario(Number(tusr.dataset.ativarUsuario)); return; }
-  const rusr=e.target.closest('[data-remover-usuario]'); if(rusr){ e.preventDefault(); removerUsuario(Number(rusr.dataset.removerUsuario)); return; }
+  const rsen=e.target.closest('[data-redefinir-senha]'); if(rsen){ e.preventDefault(); redefinirSenha(rsen.dataset.redefinirSenha); return; }
+  const ausr=e.target.closest('[data-alterar-usuario]'); if(ausr){ e.preventDefault(); abrirFormAlterarUsuario(ausr.dataset.alterarUsuario); return; }
+  const tusr=e.target.closest('[data-ativar-usuario]'); if(tusr){ e.preventDefault(); alternarAtivoUsuario(tusr.dataset.ativarUsuario); return; }
+  const rusr=e.target.closest('[data-remover-usuario]'); if(rusr){ e.preventDefault(); removerUsuario(rusr.dataset.removerUsuario); return; }
 });
 // tooltip
 const tip=$('#tip');
@@ -836,7 +835,7 @@ function renderMunicipios(soConteudo){
   const em=filtraEmendas(); const porMun={}; em.forEach(e=>{ porMun[e.municipio]=(porMun[e.municipio]||0)+(e.valor||0); }); const recorte=temFiltro()&&(estado.f.ministerio||estado.f.ano||estado.f.situacao);
   if(!soConteudo){ $('#barra').innerHTML = barraFiltros(`<label class="grow">Buscar na ficha<input data-l="q" value="${esc(l.q)}" placeholder="nome, prefeito, pessoa, telefone…"></label><label>Ordenar por<select data-l="sort"><option value="emendas_total" ${l.sort==='emendas_total'?'selected':''}>Valor de emendas</option><option value="municipio" ${l.sort==='municipio'?'selected':''}>Nome</option><option value="populacao" ${l.sort==='populacao'?'selected':''}>População</option><option value="oficios_qtd" ${l.sort==='oficios_qtd'?'selected':''}>Nº de ofícios</option><option value="eleitores_2024" ${l.sort==='eleitores_2024'?'selected':''}>Eleitores 2024</option></select></label>`); ligarBarra(l, renderMunicipios); } else { atualizarBarra(); }
   $('#conteudo').innerHTML=`${aviso()}
-  <div class="secao"><h1 style="margin:0">Municípios <span class="muted small">${lista.length} de ${DADOS.length}${recorte?' · valores de emendas já considerando o filtro':''}</span></h1>${souGestor()?'<button class="btn primary" data-novo-municipio>＋ Novo município</button>':''}</div>
+  <div class="secao"><h1 style="margin:0">Municípios <span class="muted small">${lista.length} de ${DADOS.length}${recorte?' · valores de emendas já considerando o filtro':''}</span></h1></div>
   <div class="dica">Toque em um cartão para abrir a ficha completa do município.</div>
   <div class="mun-grid">${lista.map(m=>{ const p=m.prefeito||{}; const e18=m.eleicao_2018||{}; const vE=recorte?(porMun[m.municipio]||0):m.emendas_total; return `<div class="mun" data-mun="${esc(m.municipio)}">
     <div class="name"><span>${esc(tituloCase(m.municipio))}</span><span class="reg">${esc(m.regiao||'')}</span></div>
@@ -940,8 +939,8 @@ function renderContatos(soConteudo){
   $('#conteudo').innerHTML=`${aviso()}
   <h1>Agenda de contatos <span class="muted small">${int(rows.length)} de ${int(CONTATOS.length)}</span> <button class="btn sm primary" id="expC">Baixar planilha</button></h1>
   ${temFiltro()?`<div class="dica">Mostrando contatos dos ${munSet.size} municípios do filtro atual.</div>`:''}
-  <div class="tbl-wrap"><table><thead><tr><th>Município</th><th>Cargo</th><th>Nome</th><th>Partido</th><th>Telefones (clique = WhatsApp)</th><th>Detalhe</th></tr></thead><tbody>
-  ${rows.slice(0,600).map(c=>`<tr><td><span class="m" data-mun="${esc(c.municipio)}">${esc(tituloCase(c.municipio))}</span></td><td class="small">${fl('cargo',c.cargo)}</td><td><b>${hl(tituloCase(c.nome),l.q)}</b></td><td>${esc(c.partido)}</td><td>${telLinks(c.telefones)}</td><td class="small muted">${c.texto&&norm(c.texto)!==norm(c.nome)?hl(c.texto,l.q):''}${c.email?` <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Nenhum contato encontrado.</td></tr>'}
+  <div class="tbl-wrap"><table><thead><tr><th>Município</th><th>Cargo</th><th>Nome</th><th>Partido</th><th>Telefones (clique = WhatsApp)</th><th>Detalhe</th>${souGestor()?'<th></th>':''}</tr></thead><tbody>
+  ${rows.slice(0,600).map(c=>`<tr><td><span class="m" data-mun="${esc(c.municipio)}">${esc(tituloCase(c.municipio))}</span></td><td class="small">${fl('cargo',c.cargo)}</td><td><b>${hl(tituloCase(c.nome),l.q)}</b></td><td>${esc(c.partido)}</td><td>${telLinks(c.telefones)}</td><td class="small muted">${c.texto&&norm(c.texto)!==norm(c.nome)?hl(c.texto,l.q):''}${c.email?` <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</td>${souGestor()?`<td><button type="button" class="btn sm" data-editar-municipio="${esc(c.municipio)}" title="Editar os dados deste contato">Editar</button></td>`:''}</tr>`).join('')||'<tr><td colspan="7" class="muted">Nenhum contato encontrado.</td></tr>'}
   </tbody></table></div>${rows.length>600?`<div class="nota">Mostrando 600 de ${int(rows.length)}. Refine a busca ou baixe a planilha completa.</div>`:''}`;
   ligarConteudoLocal(l, renderContatos);
   $('#expC').addEventListener('click',()=>csv(rows,[{label:'Município',key:'municipio'},{label:'Cargo',key:'cargo'},{label:'Nome',key:'nome'},{label:'Partido',key:'partido'},{label:'Telefones',get:c=>(c.telefones||[]).join(' / ')},{label:'E-mail',key:'email'},{label:'Texto original',key:'texto'}],'contatos.csv'));
@@ -986,7 +985,7 @@ function desenharUsuarios(){
   <td class="small acoes">
     <button type="button" class="btn sm" data-redefinir-senha="${u.id}">Redefinir senha</button>
     <button type="button" class="btn sm" data-alterar-usuario="${u.id}">Alterar</button>
-    ${SESSAO.usuario.id!==u.id?`<button type="button" class="btn sm" data-ativar-usuario="${u.id}">${u.ativo?'Desativar':'Ativar'}</button><button type="button" class="btn sm" data-remover-usuario="${u.id}">Remover</button>`:'<span class="muted small">(você)</span>'}
+    ${u.login==='raul.jardim'?'<span class="muted small">(proprietário)</span>':(SESSAO.usuario.id!==u.id?`<button type="button" class="btn sm" data-ativar-usuario="${u.id}">${u.ativo?'Desativar':'Ativar'}</button><button type="button" class="btn sm" data-remover-usuario="${u.id}">Remover</button>`:'<span class="muted small">(você)</span>')}
   </td></tr>`).join('')||'<tr><td colspan="6" class="muted">Nenhum usuário.</td></tr>'}
   </tbody></table></div>`;
 }
@@ -1078,17 +1077,14 @@ function abrirModalCredenciais(login, senha){
     catch(e){ try{ const ta=document.createElement('textarea'); ta.value=texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('Dados copiados.'); }catch(e2){ toast('Não foi possível copiar automaticamente.','erro'); } }
   });
   $('#cred-whats').addEventListener('click', ()=> $('#cred-whats-area').classList.remove('hidden'));
+  const abrirWhats = d => { if(d.length<10){ toast('Telefone inválido.','erro'); return; } window.open('https://wa.me/55'+d+'?text='+encodeURIComponent(texto),'_blank'); };
   if(navigator.contacts && navigator.contacts.select){
     $('#cred-agenda').addEventListener('click', async ()=>{
-      try{ const sel=await navigator.contacts.select(['tel'],{multiple:false}); const c=sel&&sel[0]; if(c && c.tel && c.tel[0]) $('#cred-tel').value=c.tel[0].replace(/\D/g,''); }
+      try{ const sel=await navigator.contacts.select(['tel'],{multiple:false}); const c=sel&&sel[0]; const tel=c&&c.tel&&c.tel[0]; if(tel){ const d=tel.replace(/\D/g,''); $('#cred-tel').value=d; abrirWhats(d); } }
       catch(e){}
     });
   } else { const ag=$('#cred-agenda'); if(ag) ag.classList.add('hidden'); }
-  $('#cred-abrir-whats').addEventListener('click', ()=>{
-    const d=$('#cred-tel').value.replace(/\D/g,'');
-    if(d.length<10){ toast('Telefone inválido.','erro'); return; }
-    window.open('https://wa.me/55'+d+'?text='+encodeURIComponent(texto),'_blank');
-  });
+  $('#cred-abrir-whats').addEventListener('click', ()=> abrirWhats($('#cred-tel').value.replace(/\D/g,'')));
   $('#cred-fechar').addEventListener('click', fecharModal);
 }
 
