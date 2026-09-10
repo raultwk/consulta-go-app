@@ -3,9 +3,9 @@
 // Estratégia do index.html: rede primeiro, cache como reserva (assim uma publicação
 // nova chega quando há internet). Ícones: cache primeiro (mudam muito pouco).
 // Requisições para o Supabase (dados) NUNCA passam pelo cache deste service worker.
-// 20260908062241 é substituído pela data/hora da publicação em ferramentas/publicar_app.py
+// 20260910175259 é substituído pela data/hora da publicação em ferramentas/publicar_app.py
 // (em app/sw.js, para desenvolvimento, fica com o marcador mesmo).
-const VERSAO = '20260908062241';
+const VERSAO = '20260910175259';
 const CACHE_NOME = 'cmgo-' + VERSAO;
 const CASCO = [
   './',

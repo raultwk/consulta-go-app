@@ -41,21 +41,25 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px;bord
 /* faixa amarela de "sem internet" */
 .faixa-offline{background:#fff3d6;color:#5b4700;text-align:center;font-size:13px;font-weight:600;padding:7px 10px;border-bottom:1px solid #f1dc9c;position:sticky;top:0;z-index:21}
 
-/* topo */
+/* topo — cabeçalho compacto: uma linha só (logo + nome + Menu) */
 header.top{position:sticky;top:0;z-index:20;background:var(--azul);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.top .wrap{max-width:1320px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;line-height:1.15}
-.logo-marca{height:44px;width:auto;display:block;border-radius:4px}
-.brand-txt{display:flex;flex-direction:column}
-.brand b{font-size:17px;letter-spacing:.2px}
-.brand span{font-size:12px;opacity:.85}
-.search{flex:1;min-width:240px;position:relative}
-.search input{width:100%;background:#fff;border:0;padding-left:36px;min-height:44px}
-.search svg{position:absolute;left:11px;top:14px;width:16px;height:16px;fill:none;stroke:#52514e;stroke-width:2}
-nav.tabs{display:flex;gap:2px;flex-wrap:wrap}
-nav.tabs button{background:transparent;border:0;border-bottom:3px solid transparent;color:#fff;opacity:.8;padding:10px 12px;border-radius:8px 8px 0 0;font-weight:600;font-size:14.5px;position:relative;min-height:44px}
-nav.tabs button:hover{opacity:1;background:rgba(255,255,255,.1)}
-nav.tabs button.on{opacity:1;background:rgba(255,255,255,.16);border-bottom-color:var(--ouro)}
+.top .wrap{max-width:1320px;margin:0 auto;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;line-height:1.15;min-width:0}
+.logo-marca{height:40px;width:auto;display:block;border-radius:4px;flex:none}
+.brand b{font-size:16px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-toggle{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.32);color:#fff;min-height:44px;padding:8px 14px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
+.menu-toggle:hover{background:rgba(255,255,255,.24);color:#fff}
+.menu-toggle .seta{display:inline-block}
+
+/* painel do menu (abas + busca + atualização + usuário) */
+.menu-painel{position:fixed;left:0;right:0;z-index:19;background:var(--surface);border-bottom:1px solid var(--line-2);box-shadow:0 10px 24px rgba(0,0,0,.18);padding:12px 14px 16px;max-height:calc(100vh - 54px);overflow:auto}
+nav.tabs{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+nav.tabs button{background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;color:var(--ink);opacity:1;padding:11px 14px;font-weight:700;font-size:14.5px;text-align:left;min-height:44px;width:100%}
+nav.tabs button:hover{border-color:var(--accent-2);color:var(--accent)}
+nav.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.menu-busca{position:relative;margin-bottom:12px}
+.menu-busca input{width:100%;background:var(--surface);border:1px solid var(--line);padding-left:36px;min-height:44px}
+.menu-busca svg{position:absolute;left:11px;top:14px;width:16px;height:16px;fill:none;stroke:var(--ink-3);stroke-width:2}
 
 main{max-width:1320px;margin:0 auto;padding:18px}
 .aviso{background:#fff8e1;border:1px solid #f1dc9c;border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;color:#5b4700;font-size:13px}
@@ -69,22 +73,21 @@ h3{font-size:14px;margin:18px 0 8px;color:var(--ink-2);text-transform:uppercase;
 .secao .small{color:var(--ink-3)}
 
 /* barra de filtro global: trilha + campos */
-.fbar{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:10px 14px 6px;margin-bottom:14px;box-shadow:var(--shadow)}
-.trilha{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px;font-size:13.5px}
-.trilha .mig{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink-2);cursor:pointer;font-weight:600}
-.trilha .mig:hover{border-color:var(--accent-2);color:var(--accent)}
-.trilha .mig.raiz{background:var(--accent);color:#fff;border-color:var(--accent)}
-.trilha .mig .k{font-weight:400;opacity:.75;margin-right:4px}
-.trilha .mig .x{margin-left:6px;opacity:.6}
-.trilha .mig .x:hover{opacity:1;color:var(--crit)}
-.trilha .sep{color:var(--ink-3)}
-.trilha .lbl{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px;margin-right:4px}
-.dica{font-size:12.5px;color:var(--ink-3);margin:-6px 0 12px}
-.filtros-det summary{cursor:pointer;font-weight:700;color:var(--accent);list-style:none;padding:8px 4px;font-size:14px;user-select:none;min-height:44px;display:flex;align-items:center}
-.filtros-det summary::-webkit-details-marker{display:none}
-.filtros-det summary::marker{display:none;content:''}
-.filtros-det summary:hover{text-decoration:underline}
-.filtros-det[open] summary{margin-bottom:2px}
+.fbar{background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.fb-linha{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13.5px}
+.fb-geral{font-weight:700;color:var(--ink);white-space:nowrap;cursor:default}
+.fb-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.mig{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink-2);cursor:pointer;font-weight:600}
+.mig:hover{border-color:var(--accent-2);color:var(--accent)}
+.mig .k{font-weight:400;opacity:.75;margin-right:4px}
+.mig .x{margin-left:6px;opacity:.6}
+.mig .x:hover{opacity:1;color:var(--crit)}
+.fb-toggle{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:var(--accent);font-weight:700;min-height:38px;white-space:nowrap}
+.fb-toggle:hover{border-color:var(--accent-2)}
+.fb-limpar{margin-left:auto;background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--ink-2);white-space:nowrap;min-height:32px}
+.fb-limpar:hover{border-color:var(--crit);color:var(--crit)}
+#filtros-campos{margin-top:8px}
+.dica{font-size:12.5px;color:var(--ink-3);margin:8px 0 12px}
 
 /* cartões de números */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
@@ -248,11 +251,11 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 .form-erro{background:var(--crit-bg);color:var(--crit);border-radius:8px;padding:9px 11px;font-size:13.5px}
 
 /* topo: usuário logado */
-.userbox{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;margin-left:auto;flex-wrap:wrap}
-.userbox .userinfo{white-space:nowrap}
-.userbox .atualizacao{font-size:11.5px;opacity:.85;white-space:nowrap}
-.userbox .btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:#fff}
-.userbox .btn:hover{background:rgba(255,255,255,.22);color:#fff}
+.userbox{display:flex;flex-direction:column;align-items:stretch;gap:8px;color:var(--ink);font-size:13px}
+.userbox .userinfo{white-space:normal;font-weight:600;color:var(--ink)}
+.userbox .atualizacao{font-size:11.5px;opacity:.85;white-space:normal;color:var(--ink-3)}
+.userbox .btn{background:var(--surface-2);border-color:var(--line);color:var(--ink);width:100%}
+.userbox .btn:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-2)}
 
 /* toasts */
 .toasts{position:fixed;bottom:16px;right:16px;z-index:300;display:flex;flex-direction:column;gap:8px;max-width:320px}
@@ -278,7 +281,7 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 .carregando-inline{color:var(--ink-3);padding:20px 0}
 
 @media print{
-  header.top,.filters,.btn,.pager,.dica{display:none!important}
+  header.top,.menu-painel,.filters,.btn,.pager,.dica{display:none!important}
   body{background:#fff} main{max-width:none;padding:0}
   .card,.tbl-wrap,.tile{box-shadow:none;break-inside:avoid}
   th{position:static}
@@ -288,8 +291,6 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
   .kv{grid-template-columns:1fr} .kv dt{margin-top:6px}
   .rosca{grid-template-columns:120px 1fr} .rosca svg{width:120px;height:120px}
   .filters label{max-width:none}
-  nav.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
-  nav.tabs button{flex:none;white-space:nowrap}
 }
 @media (max-width:480px){
   .modal-backdrop{padding:0}
@@ -299,19 +300,12 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
   .form-grid{grid-template-columns:1fr}
   .form-acoes{flex-direction:column-reverse}
   .form-acoes .btn{width:100%}
-  .userbox{flex-wrap:wrap;justify-content:flex-end}
   .secao{flex-direction:column;align-items:stretch}
   .secao .btn.primary,.secao .btn.ok{width:100%}
   .tiles{grid-template-columns:repeat(2,1fr);gap:8px}
   .tile .val{font-size:26px}
   .grid{grid-template-columns:1fr}
   .top .wrap{padding:8px 12px;gap:8px}
-  .brand{order:1;flex-basis:100%}
-  nav.tabs{order:2;flex-basis:100%}
-  .search{order:3;min-width:0;flex-basis:100%}
-  .userbox{order:4;flex-basis:100%;font-size:12.5px}
-  nav.tabs::-webkit-scrollbar{display:none}
-  nav.tabs{scrollbar-width:none}
   table th:first-child,table td:first-child{position:sticky;left:0;background:var(--surface);z-index:2;box-shadow:2px 0 4px rgba(27,35,51,.08)}
   table th:first-child{background:var(--surface-2);z-index:3}
   .resumo{gap:8px 14px}
@@ -351,8 +345,10 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 <div id="carregando" class="overlay-full hidden"><div class="auth-card" style="text-align:center">Carregando…</div></div>
 
 <header class="top"><div class="wrap">
-  <div class="brand"><img class="logo-marca" alt="Senador Vanderlan Cardoso"><div class="brand-txt"><b>Consulta Municípios GO</b><span>Fichas de atendimento · gabinete do Senador Vanderlan Cardoso</span></div></div>
-  <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Buscar em tudo: município, pessoa, telefone, objeto da emenda, ofício…" autocomplete="off"></div>
+  <div class="brand"><img class="logo-marca" alt="Senador Vanderlan Cardoso"><b>Consulta Municípios GO</b></div>
+  <button type="button" id="btn-menu" class="btn menu-toggle" aria-expanded="false" aria-controls="menu-painel">Menu <span class="seta">▾</span></button>
+</div></header>
+<div id="menu-painel" class="menu-painel hidden">
   <nav class="tabs" id="tabs">
     <button data-tab="painel" class="on">Painel</button>
     <button data-tab="municipios">Municípios</button>
@@ -362,9 +358,10 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
     <button data-tab="usuarios" class="so-gestor hidden">Usuários</button>
     <button data-tab="auditoria" class="so-gestor hidden">Histórico</button>
   </nav>
+  <div class="menu-busca"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="busca" type="search" placeholder="Buscar em tudo: município, pessoa, telefone, objeto da emenda, ofício…" autocomplete="off"></div>
   <div class="userbox" id="userbox"></div>
-</div></header>
-<main id="app"></main>
+</div>
+<main><div id="barra"></div><div id="conteudo"></div></main>
 <footer class="rodape"><span id="rodape-atualizacao" class="info-atualizacao"></span><span class="assinatura">by Raul Jardim</span></footer>
 <div id="tip" class="tip hidden"></div>
 <datalist id="dl-municipios"></datalist>
@@ -610,20 +607,29 @@ const estado = { tab:'painel', q:'', mun:null,
   f: filtroVazio(), ordem: [],              // filtro global + ordem em que foi montado (trilha)
   loc: { emendas:{q:'',sort:'valor',dir:-1,page:0}, oficios:{q:'',sort:'ano',dir:-1,page:0}, municipios:{q:'',sort:'emendas_total',dir:-1}, contatos:{q:''} } };
 const PAGE=100;
+let filtrosAbertos = false; // painel de campos da barra de filtros (item 3 dos ajustes de 10/09/2026)
 function setFiltro(k,v){ estado.f[k]=v||''; estado.ordem=estado.ordem.filter(x=>x!==k); if(v) estado.ordem.push(k); Object.values(estado.loc).forEach(l=>{ if('page' in l) l.page=0; }); }
 function limparFiltros(){ estado.f=filtroVazio(); estado.ordem=[]; }
 
 // ---------- navegação ----------
-function go(tab){ estado.tab=tab; estado.mun=null; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); render(); window.scrollTo(0,0); if(window.innerWidth<640){ const ab=$('#tabs button.on'); if(ab) ab.scrollIntoView({inline:'center',block:'nearest'}); } }
-$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ estado.q=''; $('#busca').value=''; go(b.dataset.tab);} });
+function go(tab){ estado.tab=tab; estado.mun=null; filtrosAbertos=false; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); render(); window.scrollTo(0,0); }
+$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ estado.q=''; $('#busca').value=''; go(b.dataset.tab); fecharMenu(); } });
 let tBusca; $('#busca').addEventListener('input', e=>{ clearTimeout(tBusca); tBusca=setTimeout(()=>{ estado.q=e.target.value.trim(); estado.mun=null; estado.tab = estado.q ? 'busca':'painel'; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===estado.tab)); render(); },180); });
-function abrirMunicipio(nome){ estado.mun=nome; render(); window.scrollTo(0,0); }
+function abrirMunicipio(nome){ estado.mun=nome; render(); window.scrollTo(0,0); fecharMenu(); }
+
+// ---------- cabeçalho compacto: menu recolhido (abas, busca, atualização, usuário) ----------
+let menuAberto = false;
+function fecharMenu(){ menuAberto=false; const p=$('#menu-painel'); if(p) p.classList.add('hidden'); const b=$('#btn-menu'); if(b){ b.setAttribute('aria-expanded','false'); const s=$('.seta',b); if(s) s.textContent='▾'; } }
+function abrirMenu(){ menuAberto=true; const p=$('#menu-painel'); if(!p) return; const h=$('header.top').offsetHeight; p.style.top=h+'px'; p.classList.remove('hidden'); const b=$('#btn-menu'); if(b){ b.setAttribute('aria-expanded','true'); const s=$('.seta',b); if(s) s.textContent='▴'; } }
+$('#btn-menu').addEventListener('click', e=>{ e.stopPropagation(); menuAberto ? fecharMenu() : abrirMenu(); });
+document.addEventListener('click', e=>{ if(!menuAberto) return; if(e.target.closest('#menu-painel')||e.target.closest('#btn-menu')) return; fecharMenu(); });
+
 document.addEventListener('click', e=>{
   const a=e.target.closest('[data-mun]'); if(a){ e.preventDefault(); abrirMunicipio(a.dataset.mun); return; }
-  const fi=e.target.closest('[data-filtro]'); if(fi){ e.preventDefault(); const [k,v]=JSON.parse(fi.dataset.filtro); setFiltro(k,v); go(fi.dataset.aba || ((estado.tab==='busca'||estado.mun) ? 'painel' : estado.tab)); return; }
-  const rm=e.target.closest('[data-rem]'); if(rm){ e.preventDefault(); e.stopPropagation(); setFiltro(rm.dataset.rem,''); render(); return; }
-  const raiz=e.target.closest('[data-raiz]'); if(raiz){ e.preventDefault(); limparFiltros(); go('painel'); return; }
-  const t=e.target.closest('[data-go]'); if(t){ e.preventDefault(); const p=JSON.parse(t.dataset.go); if(p.filtros){ limparFiltros(); Object.entries(p.filtros).forEach(([k,v])=>setFiltro(k,v)); } go(p.tab); return; }
+  const fi=e.target.closest('[data-filtro]'); if(fi){ e.preventDefault(); const [k,v]=JSON.parse(fi.dataset.filtro); setFiltro(k,v); filtrosAbertos=false; go(fi.dataset.aba || ((estado.tab==='busca'||estado.mun) ? 'painel' : estado.tab)); return; }
+  const rm=e.target.closest('[data-rem]'); if(rm){ e.preventDefault(); e.stopPropagation(); setFiltro(rm.dataset.rem,''); filtrosAbertos=false; render(); return; }
+  const lt=e.target.closest('[data-limpar-tudo]'); if(lt){ e.preventDefault(); limparFiltros(); filtrosAbertos=false; render(); return; }
+  const t=e.target.closest('[data-go]'); if(t){ e.preventDefault(); const p=JSON.parse(t.dataset.go); if(p.filtros){ limparFiltros(); Object.entries(p.filtros).forEach(([k,v])=>setFiltro(k,v)); } filtrosAbertos=false; go(p.tab); return; }
   // ---- ações de dados (perfis inseridor/gestor) ----
   const einE=e.target.closest('[data-inserir-emenda]'); if(einE){ e.preventDefault(); if(!pode('inserir_emenda')){ toast('Seu perfil não pode inserir emendas.','erro'); return; } abrirFormEmenda(einE.dataset.inserirEmenda||null); return; }
   const einO=e.target.closest('[data-inserir-oficio]'); if(einO){ e.preventDefault(); if(!pode('inserir_oficio')){ toast('Seu perfil não pode inserir ofícios.','erro'); return; } abrirFormOficio(einO.dataset.inserirOficio||null); return; }
@@ -668,14 +674,20 @@ function agrupar(arr, key, val){ const m={}; arr.forEach(x=>{ const k=(typeof ke
 function contar(arr, key){ const m={}; arr.forEach(x=>{ const k=x[key]; m[k]=(m[k]||0)+1; }); return m; }
 function combo(id, opcoesChave, todos='Todos'){ const valor=estado.f[id]||''; return `<label>${DIMS[id]}<span class="combo"><input data-f="${id}" data-opcoes="${opcoesChave||id}" class="${valor?'ativo':''}" value="${esc(valor)}" placeholder="${todos} — digite p/ filtrar" autocomplete="off" spellcheck="false"><button type="button" class="limpa" title="Limpar" ${valor?'':'style="display:none"'}>✕</button><div class="lista hidden"></div></span></label>`; }
 
-// barra global: trilha (migalhas) + campos digitáveis. Aparece em todas as abas.
+// barra de filtros: "Painel geral" (sem clique) + migalhas + "Filtros ▾" + "Limpar tudo". Aparece em todas as abas.
+// Fica em #barra (fora de #conteudo) para que digitar não recrie os campos e o teclado do celular não feche (ajuste 10/09/2026).
 function barraFiltros(camposExtras=''){
   const f=estado.f, ordem=estado.ordem;
-  const trilha=`<div class="trilha"><span class="lbl">Filtro ativo</span><span class="mig raiz" data-raiz title="Tirar todos os filtros e voltar ao painel geral">Painel geral</span>${ordem.map(k=>`<span class="sep">›</span><span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,f[k]))}<span class="x">✕</span></span>`).join('')}${!ordem.length?'<span class="muted small" style="margin-left:6px">nenhum — clique em qualquer barra, fatia, número ou nome para filtrar; o filtro vale em todas as abas</span>':''}</div>`;
-  const camposInt=`<div class="filters">${combo('municipio')}${combo('regiao',null,'Todas')}${combo('ministerio')}${combo('ano')}${combo('situacao',null,'Todas')}${combo('partido')}${combo('psd',null,'Tanto faz')}${camposExtras}${ordem.length?'<button class="btn" data-raiz>Limpar tudo</button>':''}</div>`;
-  const abertoPorPadrao = window.innerWidth >= 760 || ordem.length>0;
-  const campos=`<details class="filtros-det"${abertoPorPadrao?' open':''}><summary>Filtros <span class="seta">▾</span></summary>${camposInt}</details>`;
-  return `<div class="fbar">${trilha}${campos}</div>`;
+  const chips = ordem.map(k=>`<span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,f[k]))}<span class="x">✕</span></span>`).join('');
+  const linha = `<div class="fb-linha">
+    <span class="fb-geral">Painel geral</span>
+    <span class="fb-chips" id="fb-chips">${chips}</span>
+    <button type="button" class="fb-toggle" id="fb-toggle" aria-expanded="${filtrosAbertos?'true':'false'}">Filtros <span class="seta">${filtrosAbertos?'▴':'▾'}</span></button>
+    ${ordem.length?'<button type="button" class="fb-limpar" data-limpar-tudo>Limpar tudo</button>':''}
+  </div>`;
+  const camposInt = `<div class="filters">${combo('municipio')}${combo('regiao',null,'Todas')}${combo('ministerio')}${combo('ano')}${combo('situacao',null,'Todas')}${combo('partido')}${combo('psd',null,'Tanto faz')}${camposExtras}</div>`;
+  const campos = `<div id="filtros-campos" class="${filtrosAbertos?'':'hidden'}">${camposInt}</div>`;
+  return `<div class="fbar" id="fbar">${linha}${campos}</div>`;
 }
 function ligarCombos(el, cb){
   $$('.combo', el).forEach(c=>{
@@ -701,8 +713,34 @@ function ligarLocais(el, l, cb){ // campos locais da aba (busca por texto, orden
   $$('[data-sort]', el).forEach(t=>t.addEventListener('click', ()=>{ const k=t.dataset.sort; if(l.sort===k) l.dir=-l.dir; else { l.sort=k; l.dir = (k==='valor'||k==='valor_solicitado'||k==='ano')?-1:1; } cb(); }));
   $$('[data-pg]', el).forEach(b=>b.addEventListener('click', ()=>{ l.page+=Number(b.dataset.pg); cb(); }));
 }
-function manterFoco(el){ const a=document.activeElement; const key=a&&a.dataset?(a.dataset.f?`[data-f="${a.dataset.f}"]`:(a.dataset.l?`[data-l="${a.dataset.l}"]`:null)):null; if(!key) return; const i=$(key, el); if(i){ i.focus({preventScroll:true}); try{ i.setSelectionRange(i.value.length,i.value.length);}catch(e){} } }
-function ligarTudo(el, l, rerender){ const cb=(digitando)=>{ rerender(); if(digitando) manterFoco($('#app')); }; ligarCombos(el, cb); if(l) ligarLocais(el, l, cb); }
+// atualiza só as partes de #barra que podem mudar sem digitação (migalhas, "Limpar tudo", estado "ativo" dos combos)
+// — nunca recria os <input>, então o combo em digitação e o teclado do celular não são perdidos.
+function atualizarBarra(){
+  const barraEl = $('#barra'); if(!barraEl) return;
+  const chipsEl = $('#fb-chips', barraEl);
+  if(chipsEl) chipsEl.innerHTML = estado.ordem.map(k=>`<span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,estado.f[k]))}<span class="x">✕</span></span>`).join('');
+  let btn = $('.fb-limpar', barraEl);
+  if(estado.ordem.length){
+    if(!btn){ const linha=$('.fb-linha', barraEl); if(linha){ btn=document.createElement('button'); btn.type='button'; btn.className='fb-limpar'; btn.setAttribute('data-limpar-tudo',''); btn.textContent='Limpar tudo'; linha.appendChild(btn); } }
+  } else if(btn){ btn.remove(); }
+  $$('.combo', barraEl).forEach(c=>{ const inp=$('input',c); if(!inp||inp===document.activeElement) return; const id=inp.dataset.f; inp.classList.toggle('ativo', !!estado.f[id]); const lm=$('.limpa',c); if(lm) lm.style.display = estado.f[id] ? '' : 'none'; });
+}
+// liga a barra de filtros (combos + campo(s) locais da aba). Chamada só quando #barra é reconstruída inteira.
+function ligarBarra(l, renderFn){
+  const barraEl = $('#barra'); if(!barraEl) return;
+  const cb = (digitando) => { if(digitando){ renderFn(true); } else { filtrosAbertos=false; renderFn(); } };
+  ligarCombos(barraEl, cb);
+  if(l) ligarLocais(barraEl, l, cb);
+  const tg = $('#fb-toggle', barraEl);
+  if(tg) tg.addEventListener('click', ()=>{
+    filtrosAbertos = !filtrosAbertos;
+    const campos = $('#filtros-campos', barraEl); if(campos) campos.classList.toggle('hidden', !filtrosAbertos);
+    tg.setAttribute('aria-expanded', String(filtrosAbertos));
+    const seta = $('.seta', tg); if(seta) seta.textContent = filtrosAbertos ? '▴' : '▾';
+  });
+}
+// liga ordenação/paginação de tabela dentro de #conteudo (recriado a cada render; não precisa preservar foco)
+function ligarConteudoLocal(l, renderFn){ if(l) ligarLocais($('#conteudo'), l, ()=>renderFn()); }
 
 // gráficos ------------------------------------------------------------
 // barras horizontais — items: [{n, v, q, tip}] ; opts: {fmt, dim, limite, rotulo, mun, sec, mostrarQ, aba}
@@ -738,7 +776,7 @@ function tabelaOficios(rows,o={}){ const l=o.l||{sort:'',dir:1}; const acoes=!!o
   ${rows.length?`<tr class="total"><td colspan="${o.semMunicipio?3:4}">Total (${int(rows.length)} pedidos)</td><td class="num">${brl(sum(rows,x=>x.valor_solicitado))}</td><td colspan="${acoes?5:4}"></td></tr>`:`<tr><td colspan="${9+(acoes?1:0)}" class="muted">Nenhum ofício encontrado.</td></tr>`}</tbody></table></div>`; }
 
 // ---------- PAINEL (BI em níveis: cada clique acrescenta um filtro e redesenha) ----------
-function renderPainel(){
+function renderPainel(soConteudo){
   const f=estado.f; const raiz=!temFiltro();
   const em=filtraEmendas(), of=filtraOficios(), muns=filtraMunicipios();
   const munE=uniq(em.map(e=>e.municipio)), munO=uniq(of.map(o=>o.municipio));
@@ -777,24 +815,25 @@ function renderPainel(){
   const acoesTab = souGestor();
   const tabE = em.length ? `<div class="secao"><h2>Emendas deste recorte</h2><span class="small">${int(em.length)} · ${brl(totE)}</span><button class="btn sm" id="expBIe">Baixar planilha</button><button class="btn sm" data-go='{"tab":"emendas"}'>Ver na aba Emendas</button></div>${tabelaEmendas(ordenar(em,'valor',-1).slice(0,limE),{semMunicipio:!!f.municipio&&SETS.municipio.has(norm(f.municipio)),acoes:acoesTab})}${em.length>limE?`<div class="nota">Mostrando ${limE} de ${int(em.length)}. Use "Ver na aba Emendas" para todas.</div>`:''}` : '';
   const tabO = of.length ? `<div class="secao"><h2>Ofícios (pedidos) deste recorte</h2><span class="small">${int(of.length)} · ${brl(totO)} solicitados</span><button class="btn sm" id="expBIo">Baixar planilha</button><button class="btn sm" data-go='{"tab":"oficios"}'>Ver na aba Ofícios</button></div>${tabelaOficios(ordenar(of,'ano',-1).slice(0,limO),{semMunicipio:!!f.municipio&&SETS.municipio.has(norm(f.municipio)),acoes:acoesTab})}${of.length>limO?`<div class="nota">Mostrando ${limO} de ${int(of.length)}. Use "Ver na aba Ofícios" para todos.</div>`:''}` : '';
-  const vazio = !em.length && !of.length ? `<div class="card"><b>Nada encontrado com esses filtros.</b> <span class="muted">Tire um filtro na trilha acima ou clique em "Painel geral".</span></div>` : '';
-  $('#app').innerHTML=`${aviso()}${barraFiltros()}<div class="dica">${raiz?'Clique em qualquer barra, fatia ou número para abrir um sub-painel só com aquele recorte. Cada clique acrescenta um filtro; a trilha acima mostra o caminho e permite voltar. O filtro vale também nas abas Municípios, Emendas, Ofícios e Contatos.':(fim?'Fim da linha: este recorte não tem mais como ser dividido. Abaixo estão todos os registros.':'Sub-painel filtrado. Continue clicando nos gráficos para refinar, ou tire um filtro na trilha para voltar.')}</div>${fichaMun}${tiles}${vazio}
+  const vazio = !em.length && !of.length ? `<div class="card"><b>Nada encontrado com esses filtros.</b> <span class="muted">Tire uma migalha acima (✕) ou use "Limpar tudo".</span></div>` : '';
+  if(!soConteudo){ $('#barra').innerHTML = barraFiltros(); ligarBarra(null, renderPainel); } else { atualizarBarra(); }
+  $('#conteudo').innerHTML=`${aviso()}<div class="dica">${raiz?'Clique em qualquer barra, fatia ou número para abrir um sub-painel só com aquele recorte. Cada clique acrescenta um filtro; as migalhas acima mostram o caminho e permitem voltar. O filtro vale também nas abas Municípios, Emendas, Ofícios e Contatos.':(fim?'Fim da linha: este recorte não tem mais como ser dividido. Abaixo estão todos os registros.':'Sub-painel filtrado. Continue clicando nos gráficos para refinar, ou tire uma migalha para voltar.')}</div>${fichaMun}${tiles}${vazio}
     ${cardsE.length?`<div class="secao"><h2>Emendas destinadas</h2><span class="small">como se distribuem neste recorte · clique para abrir</span></div><div class="grid">${cardsE.join('')}</div>`:''}
     ${cardsO.length?`<div class="secao"><h2>Ofícios (pedidos recebidos)</h2><span class="small">quantidade de pedidos neste recorte · clique para abrir</span></div><div class="grid">${cardsO.join('')}</div>`:''}
     ${extrasRaiz}${tabE}${tabO}`;
-  ligarTudo($('#app'), null, renderPainel);
   const be=$('#expBIe'); if(be) be.addEventListener('click',()=>csv(ordenar(em,'valor',-1),COLS_E,'emendas-recorte.csv'));
   const bo=$('#expBIo'); if(bo) bo.addEventListener('click',()=>csv(ordenar(of,'ano',-1),COLS_O,'oficios-recorte.csv'));
 }
 
 // ---------- MUNICÍPIOS ----------
-function renderMunicipios(){
+function renderMunicipios(soConteudo){
   const l=estado.loc.municipios;
   let lista=filtraMunicipios().filter(m=>!l.q||m._busca.includes(norm(l.q)));
   lista=ordenar(lista,l.sort,l.sort==='municipio'?1:-1);
   const max=Math.max(...DADOS.map(m=>m.emendas_total),1);
   const em=filtraEmendas(); const porMun={}; em.forEach(e=>{ porMun[e.municipio]=(porMun[e.municipio]||0)+(e.valor||0); }); const recorte=temFiltro()&&(estado.f.ministerio||estado.f.ano||estado.f.situacao);
-  $('#app').innerHTML=`${aviso()}${barraFiltros(`<label class="grow">Buscar na ficha<input data-l="q" value="${esc(l.q)}" placeholder="nome, prefeito, pessoa, telefone…"></label><label>Ordenar por<select data-l="sort"><option value="emendas_total" ${l.sort==='emendas_total'?'selected':''}>Valor de emendas</option><option value="municipio" ${l.sort==='municipio'?'selected':''}>Nome</option><option value="populacao" ${l.sort==='populacao'?'selected':''}>População</option><option value="oficios_qtd" ${l.sort==='oficios_qtd'?'selected':''}>Nº de ofícios</option><option value="eleitores_2024" ${l.sort==='eleitores_2024'?'selected':''}>Eleitores 2024</option></select></label>`)}
+  if(!soConteudo){ $('#barra').innerHTML = barraFiltros(`<label class="grow">Buscar na ficha<input data-l="q" value="${esc(l.q)}" placeholder="nome, prefeito, pessoa, telefone…"></label><label>Ordenar por<select data-l="sort"><option value="emendas_total" ${l.sort==='emendas_total'?'selected':''}>Valor de emendas</option><option value="municipio" ${l.sort==='municipio'?'selected':''}>Nome</option><option value="populacao" ${l.sort==='populacao'?'selected':''}>População</option><option value="oficios_qtd" ${l.sort==='oficios_qtd'?'selected':''}>Nº de ofícios</option><option value="eleitores_2024" ${l.sort==='eleitores_2024'?'selected':''}>Eleitores 2024</option></select></label>`); ligarBarra(l, renderMunicipios); } else { atualizarBarra(); }
+  $('#conteudo').innerHTML=`${aviso()}
   <div class="secao"><h1 style="margin:0">Municípios <span class="muted small">${lista.length} de ${DADOS.length}${recorte?' · valores de emendas já considerando o filtro':''}</span></h1>${souGestor()?'<button class="btn primary" data-novo-municipio>＋ Novo município</button>':''}</div>
   <div class="dica">Toque em um cartão para abrir a ficha completa do município.</div>
   <div class="mun-grid">${lista.map(m=>{ const p=m.prefeito||{}; const e18=m.eleicao_2018||{}; const vE=recorte?(porMun[m.municipio]||0):m.emendas_total; return `<div class="mun" data-mun="${esc(m.municipio)}">
@@ -807,7 +846,7 @@ function renderMunicipios(){
     <div class="row"><span>Vanderlan 2018</span><b>${e18.percentual!=null?e18.percentual+'%':'—'} <span class="muted">${e18.classificacao?'· '+esc(e18.classificacao)+' lugar':''}</span></b></div>
     <div class="row"><span>PSD na Câmara</span><b>${m.psd_representantes>0?m.psd_representantes+' vereador(es)':(m.psd_representantes===0?'nenhum':'—')}</b></div>
   </div>`;}).join('')||'<div class="card muted">Nenhum município com esse filtro.</div>'}</div>`;
-  ligarTudo($('#app'), l, renderMunicipios);
+  ligarConteudoLocal(l, renderMunicipios);
 }
 
 // ---------- FICHA ----------
@@ -815,7 +854,8 @@ function pessoa(cargo,p){ if(!p) return ''; if(typeof p==='string') return `<div
 function renderFicha(m){
   const e18=m.eleicao_2018||{};
   const acoesTab = souGestor();
-  $('#app').innerHTML=`<div class="ficha-top"><div><h1>${esc(tituloCase(m.municipio))}</h1><div class="sub">${esc(m.regiao||'')}${m.aniversario?` · aniversário da cidade: ${esc(m.aniversario.toLowerCase())}`:''}</div></div>
+  $('#barra').innerHTML='';
+  $('#conteudo').innerHTML=`<div class="ficha-top"><div><h1>${esc(tituloCase(m.municipio))}</h1><div class="sub">${esc(m.regiao||'')}${m.aniversario?` · aniversário da cidade: ${esc(m.aniversario.toLowerCase())}`:''}</div></div>
     <div><button class="btn" data-go='{"tab":"municipios"}'>‹ Voltar</button> <button class="btn primary" ${fAttr('municipio',m.municipio,'painel')}>Explorar no painel</button> <button class="btn" onclick="window.print()">Imprimir</button>
     ${pode('inserir_emenda')?`<button class="btn" data-inserir-emenda="${esc(m.municipio)}">＋ Inserir emenda</button>`:''}
     ${pode('inserir_oficio')?`<button class="btn" data-inserir-oficio="${esc(m.municipio)}">＋ Inserir ofício</button>`:''}
@@ -864,41 +904,44 @@ function renderFicha(m){
 }
 
 // ---------- EMENDAS ----------
-function renderEmendas(){
+function renderEmendas(soConteudo){
   const l=estado.loc.emendas; const rows=ordenar(filtraEmendas(F(),l.q),l.sort,l.dir); const page=rows.slice(l.page*PAGE,(l.page+1)*PAGE);
-  $('#app').innerHTML=`${aviso()}${barraFiltros(`<label class="grow">Buscar no objeto<input data-l="q" value="${esc(l.q)}" placeholder="ex.: ambulância, pá carregadeira, custeio…"></label>`)}
+  if(!soConteudo){ $('#barra').innerHTML = barraFiltros(`<label class="grow">Buscar no objeto<input data-l="q" value="${esc(l.q)}" placeholder="ex.: ambulância, pá carregadeira, custeio…"></label>`); ligarBarra(l, renderEmendas); } else { atualizarBarra(); }
+  $('#conteudo').innerHTML=`${aviso()}
   <div class="secao"><h1 style="margin:0">Emendas destinadas</h1>${pode('inserir_emenda')?'<button class="btn primary" data-inserir-emenda>＋ Inserir emenda</button>':''}</div>
   <div class="dica">Lista de emendas enviadas às cidades. Toque no nome do município para ver a ficha.</div>
   <div class="resumo"><span><b>${int(rows.length)}</b> emendas</span><span>somando <b>${brl(sum(rows,e=>e.valor))}</b></span><span>em <b>${uniq(rows.map(e=>e.municipio)).length}</b> municípios</span><button class="btn sm primary" id="expE">Baixar planilha</button><button class="btn sm" data-go='{"tab":"painel"}'>Ver como painel</button></div>
   ${tabelaEmendas(page,{l,q:l.q,acoes:souGestor()})}${pager(l,rows.length)}`;
-  ligarTudo($('#app'), l, renderEmendas);
+  ligarConteudoLocal(l, renderEmendas);
   $('#expE').addEventListener('click',()=>csv(rows,COLS_E,'emendas.csv'));
 }
 
 // ---------- OFÍCIOS ----------
-function renderOficios(){
+function renderOficios(soConteudo){
   const l=estado.loc.oficios; const rows=ordenar(filtraOficios(F(),l.q),l.sort,l.dir); const page=rows.slice(l.page*PAGE,(l.page+1)*PAGE);
-  $('#app').innerHTML=`${aviso()}${barraFiltros(`<label class="grow">Buscar no pedido ou solicitante<input data-l="q" value="${esc(l.q)}" placeholder="ex.: caminhão pipa, asfalto, secretário…"></label>`)}
+  if(!soConteudo){ $('#barra').innerHTML = barraFiltros(`<label class="grow">Buscar no pedido ou solicitante<input data-l="q" value="${esc(l.q)}" placeholder="ex.: caminhão pipa, asfalto, secretário…"></label>`); ligarBarra(l, renderOficios); } else { atualizarBarra(); }
+  $('#conteudo').innerHTML=`${aviso()}
   <div class="secao"><h1 style="margin:0">Ofícios recebidos <span class="muted small">pedidos das cidades ao gabinete</span></h1>${pode('inserir_oficio')?'<button class="btn primary" data-inserir-oficio>＋ Inserir ofício</button>':''}</div>
   <div class="dica">Lista de pedidos recebidos das cidades. Toque no nome do município para ver a ficha.</div>
   <div class="resumo"><span><b>${int(rows.length)}</b> pedidos</span><span>valor informado <b>${brl(sum(rows,x=>x.valor_solicitado))}</b></span><span><b>${int(rows.filter(x=>!x.valor_solicitado).length)}</b> sem valor</span><span>de <b>${uniq(rows.map(x=>x.municipio)).length}</b> municípios</span><button class="btn sm primary" id="expO">Baixar planilha</button><button class="btn sm" data-go='{"tab":"painel"}'>Ver como painel</button></div>
   ${tabelaOficios(page,{l,q:l.q,acoes:souGestor()})}${pager(l,rows.length)}`;
-  ligarTudo($('#app'), l, renderOficios);
+  ligarConteudoLocal(l, renderOficios);
   $('#expO').addEventListener('click',()=>csv(rows,COLS_O,'oficios.csv'));
 }
 
 // ---------- CONTATOS ----------
-function renderContatos(){
+function renderContatos(soConteudo){
   const l=estado.loc.contatos; const q=norm(l.q); const dq=q.replace(/\D/g,''); const f=estado.f;
   const munSet=new Set(filtraMunicipios().map(m=>m.municipio));
   const rows=CONTATOS.filter(c=>munSet.has(c.municipio)&&casa(f.cargo,c.cargo,'cargo')&&(!q||c._busca.includes(q)||(dq.length>=4&&c._busca.replace(/\D/g,'').includes(dq))));
-  $('#app').innerHTML=`${aviso()}${barraFiltros(`${combo('cargo')}<label class="grow">Buscar nome ou telefone<input data-l="q" value="${esc(l.q)}" placeholder="ex.: Wander, 99919, Saneago…"></label>`)}
+  if(!soConteudo){ $('#barra').innerHTML = barraFiltros(`${combo('cargo')}<label class="grow">Buscar nome ou telefone<input data-l="q" value="${esc(l.q)}" placeholder="ex.: Wander, 99919, Saneago…"></label>`); ligarBarra(l, renderContatos); } else { atualizarBarra(); }
+  $('#conteudo').innerHTML=`${aviso()}
   <h1>Agenda de contatos <span class="muted small">${int(rows.length)} de ${int(CONTATOS.length)}</span> <button class="btn sm primary" id="expC">Baixar planilha</button></h1>
   ${temFiltro()?`<div class="dica">Mostrando contatos dos ${munSet.size} municípios do filtro atual.</div>`:''}
   <div class="tbl-wrap"><table><thead><tr><th>Município</th><th>Cargo</th><th>Nome</th><th>Partido</th><th>Telefones (clique = WhatsApp)</th><th>Detalhe</th></tr></thead><tbody>
   ${rows.slice(0,600).map(c=>`<tr><td><span class="m" data-mun="${esc(c.municipio)}">${esc(tituloCase(c.municipio))}</span></td><td class="small">${fl('cargo',c.cargo)}</td><td><b>${hl(tituloCase(c.nome),l.q)}</b></td><td>${esc(c.partido)}</td><td>${telLinks(c.telefones)}</td><td class="small muted">${c.texto&&norm(c.texto)!==norm(c.nome)?hl(c.texto,l.q):''}${c.email?` <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Nenhum contato encontrado.</td></tr>'}
   </tbody></table></div>${rows.length>600?`<div class="nota">Mostrando 600 de ${int(rows.length)}. Refine a busca ou baixe a planilha completa.</div>`:''}`;
-  ligarTudo($('#app'), l, renderContatos);
+  ligarConteudoLocal(l, renderContatos);
   $('#expC').addEventListener('click',()=>csv(rows,[{label:'Município',key:'municipio'},{label:'Cargo',key:'cargo'},{label:'Nome',key:'nome'},{label:'Partido',key:'partido'},{label:'Telefones',get:c=>(c.telefones||[]).join(' / ')},{label:'E-mail',key:'email'},{label:'Texto original',key:'texto'}],'contatos.csv'));
 }
 
@@ -912,7 +955,8 @@ function renderBusca(){
   const fichas=DADOS.filter(m=>m._busca.includes(nq)&&!muns.includes(m));
   const irAba=(tab,campo)=>`<button class="btn sm" data-ir="${tab}" data-campo="${campo}">ver na aba com filtros</button>`;
   const sec=(t,arr,fn,go)=>arr.length?`<div class="res-grp"><h3>${t} <span class="muted">(${int(arr.length)})</span>${go||''}</h3>${arr.slice(0,25).map(fn).join('')}${arr.length>25?`<div class="muted small">… e mais ${int(arr.length-25)}. Use a aba com filtros para ver todos.</div>`:''}</div>`:'';
-  $('#app').innerHTML=`<h1>Resultados para “${esc(q)}”</h1>
+  $('#barra').innerHTML='';
+  $('#conteudo').innerHTML=`<h1>Resultados para “${esc(q)}”</h1>
   ${sec('Municípios',muns,m=>`<div class="res" data-mun="${esc(m.municipio)}"><div class="t">${hl(tituloCase(m.municipio),q)} <span class="muted small">${esc(m.regiao||'')}</span></div><div class="d">${esc(tituloCase((m.prefeito||{}).nome||''))} · ${brl(m.emendas_total)} em emendas · ${m.oficios_qtd} ofícios</div></div>`)}
   ${sec('Contatos e pessoas',cts,c=>`<div class="res" data-mun="${esc(c.municipio)}"><div class="t">${hl(tituloCase(c.nome),q)} <span class="muted small">${esc(c.cargo)} · ${esc(tituloCase(c.municipio))}</span></div><div class="d">${hl(c.texto,q)}</div></div>`,irAba('contatos','contatos'))}
   ${sec('Fichas que citam o termo',fichas,m=>{ const i=m._busca.indexOf(nq); const src=[m.municipio,m.regiao,(m.prefeito||{}).texto,(m.vice_prefeito||{}).texto,(m.presidente_camara||{}).texto,m.primeira_dama,m.secretario_saude,m.psd_presidente,m.vereadores_psd,m.companheiros,m.dep_federal,m.dep_estadual,m.eleicao_2020,m.eleicao_2024,(m.observacoes||[]).join(' ')].join(' | '); const tr=src.slice(Math.max(0,i-60),i+80); return `<div class="res" data-mun="${esc(m.municipio)}"><div class="t">${esc(tituloCase(m.municipio))}</div><div class="d">…${hl(tr,q)}…</div></div>`; })}
@@ -925,14 +969,15 @@ function renderBusca(){
 // ---------- USUÁRIOS (gestor) ----------
 let USUARIOS=[];
 async function renderUsuarios(){
-  if(!souGestor()){ $('#app').innerHTML='<div class="card">Seu perfil não tem acesso a esta aba.</div>'; return; }
-  $('#app').innerHTML='<h1>Usuários</h1><div class="carregando-inline">Carregando…</div>';
+  $('#barra').innerHTML='';
+  if(!souGestor()){ $('#conteudo').innerHTML='<div class="card">Seu perfil não tem acesso a esta aba.</div>'; return; }
+  $('#conteudo').innerHTML='<h1>Usuários</h1><div class="carregando-inline">Carregando…</div>';
   try{ USUARIOS = await rpc('listar_usuarios',{p_token:SESSAO.token}); }
-  catch(e){ $('#app').innerHTML=`<div class="card">Erro ao carregar usuários: ${esc(e.texto||e.message)}</div>`; return; }
+  catch(e){ $('#conteudo').innerHTML=`<div class="card">Erro ao carregar usuários: ${esc(e.texto||e.message)}</div>`; return; }
   desenharUsuarios();
 }
 function desenharUsuarios(){
-  $('#app').innerHTML = `<div class="secao"><h1 style="margin:0">Usuários</h1><button class="btn primary" data-novo-usuario>＋ Novo acesso</button></div>
+  $('#conteudo').innerHTML = `<div class="secao"><h1 style="margin:0">Usuários</h1><button class="btn primary" data-novo-usuario>＋ Novo acesso</button></div>
   <div class="dica">Aqui você cria e administra quem pode entrar no sistema.</div>
   <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>Acesso</th><th>Perfil</th><th>Situação</th><th>Senha</th><th></th></tr></thead><tbody>
   ${USUARIOS.map(u=>`<tr><td>${esc(u.nome)}</td><td>${esc(u.login)}</td><td>${rotuloPapel(u.papel)}</td><td>${u.ativo?'<span class="badge SIM">Ativo</span>':'<span class="badge CANCELADA">Inativo</span>'}</td><td class="small muted">${u.precisa_trocar?'precisa trocar':'ok'}</td>
@@ -1056,12 +1101,13 @@ function resumoDiff(antes,depois){
   return campos.length? esc(campos.join(', ')) : '(sem alteração detectável)';
 }
 async function renderAuditoria(){
-  if(!souGestor()){ $('#app').innerHTML='<div class="card">Seu perfil não tem acesso a esta aba.</div>'; return; }
-  $('#app').innerHTML='<h1>Histórico</h1><div class="carregando-inline">Carregando…</div>';
+  $('#barra').innerHTML='';
+  if(!souGestor()){ $('#conteudo').innerHTML='<div class="card">Seu perfil não tem acesso a esta aba.</div>'; return; }
+  $('#conteudo').innerHTML='<h1>Histórico</h1><div class="carregando-inline">Carregando…</div>';
   let rows;
   try{ rows = await rpc('listar_auditoria',{p_token:SESSAO.token, p_limite:300}); }
-  catch(e){ $('#app').innerHTML=`<div class="card">Erro ao carregar auditoria: ${esc(e.texto||e.message)}</div>`; return; }
-  $('#app').innerHTML=`<h1>Histórico <span class="muted small">últimos ${rows.length} eventos</span></h1><div class="dica">Registro de tudo o que foi alterado no sistema.</div>
+  catch(e){ $('#conteudo').innerHTML=`<div class="card">Erro ao carregar auditoria: ${esc(e.texto||e.message)}</div>`; return; }
+  $('#conteudo').innerHTML=`<h1>Histórico <span class="muted small">últimos ${rows.length} eventos</span></h1><div class="dica">Registro de tudo o que foi alterado no sistema.</div>
   <div class="tbl-wrap"><table><thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Tabela</th><th>Registro</th><th>O que mudou</th></tr></thead><tbody>
   ${rows.map(a=>`<tr><td class="small" style="white-space:nowrap">${esc(fmtData(a.quando))}</td><td>${esc(a.usuario_login||'')}</td><td>${esc(a.acao)}</td><td>${esc(a.tabela||'')}</td><td>${esc(a.registro_id||'')}</td><td class="small">${resumoDiff(a.antes,a.depois)}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Sem registros.</td></tr>'}
   </tbody></table></div>`;
@@ -1340,7 +1386,7 @@ function renderCabecalho(){
     <button class="btn sm" id="btn-trocar-senha" type="button">Trocar senha</button>
     <button class="btn sm" id="btn-sair" type="button">Sair</button>`;
   $('#btn-atualizar-agora').addEventListener('click', atualizarAgora);
-  $('#btn-trocar-senha').addEventListener('click', abrirTrocarSenha);
+  $('#btn-trocar-senha').addEventListener('click', ()=>{ fecharMenu(); abrirTrocarSenha(); });
   $('#btn-sair').addEventListener('click', sair);
   $$('.so-gestor').forEach(el=>el.classList.toggle('hidden', u.papel!=='gestor'));
   atualizarRodape();
