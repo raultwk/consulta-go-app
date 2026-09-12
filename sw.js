@@ -6,9 +6,9 @@
 // ela vale a partir da próxima abertura do app (nada é apagado antes de a nova
 // versão estar toda baixada).
 // Requisições para o Supabase (dados) NUNCA passam pelo cache deste service worker.
-// 20260912064702 é substituído pela data/hora da publicação em ferramentas/publicar_app.py
+// 20260912082924 é substituído pela data/hora da publicação em ferramentas/publicar_app.py
 // (em app/sw.js, para desenvolvimento, fica com o marcador mesmo).
-const VERSAO = '20260912064702';
+const VERSAO = '20260912082924';
 const CACHE_NOME = 'cmgo-' + VERSAO;
 const CASCO = [
   './',
