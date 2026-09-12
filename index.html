@@ -38,9 +38,6 @@ input:focus,select:focus{outline:3px solid var(--accent);outline-offset:1px;bord
 .rodape .info-atualizacao{font-size:12px;color:var(--ink-3)}
 @media print{.rodape{display:none}}
 
-/* faixa amarela de "sem internet" */
-.faixa-offline{background:#fff3d6;color:#5b4700;text-align:center;font-size:13px;font-weight:600;padding:7px 10px;border-bottom:1px solid #f1dc9c;position:sticky;top:0;z-index:21}
-
 /* topo — cabeçalho compacto: uma linha só (logo + nome + Menu) */
 header.top{position:sticky;top:0;z-index:20;background:var(--azul);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .top .wrap{max-width:1320px;margin:0 auto;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -319,7 +316,6 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
 </head>
 <body>
 <div id="toasts" class="toasts"></div>
-<div id="faixa-offline" class="faixa-offline hidden"></div>
 
 <div id="login-overlay" class="overlay-full azul hidden">
   <img class="logo-marca logo-login" alt="Senador Vanderlan Cardoso">
@@ -518,11 +514,6 @@ function fmtDataHora(d){
 function textoAtualizacao(){
   if(!ULTIMA_ATUALIZACAO) return '';
   return `Informação atualizada dia ${fmtDataHora(ULTIMA_ATUALIZACAO)}${OFFLINE?' · sem internet':''}`;
-}
-function atualizarFaixaOffline(){
-  const el = $('#faixa-offline'); if(!el) return;
-  if(OFFLINE){ el.textContent = `Sem internet · mostrando dados de ${ULTIMA_ATUALIZACAO?fmtDataHora(ULTIMA_ATUALIZACAO):'—'}`; el.classList.remove('hidden'); }
-  else { el.classList.add('hidden'); el.textContent=''; }
 }
 function atualizarRodape(){ const el=$('#rodape-atualizacao'); if(el) el.textContent = textoAtualizacao(); }
 // bloqueia (e avisa) ações que gravam quando o aparelho está sem internet
@@ -1419,7 +1410,6 @@ function renderCabecalho(){
   $('#btn-sair').addEventListener('click', sair);
   $$('.so-gestor').forEach(el=>el.classList.toggle('hidden', u.papel!=='gestor'));
   atualizarRodape();
-  atualizarFaixaOffline();
 }
 
 // ---------- render (despacho por aba) ----------
