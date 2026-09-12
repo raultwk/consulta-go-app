@@ -86,6 +86,9 @@ h3{font-size:14px;margin:18px 0 8px;color:var(--ink-2);text-transform:uppercase;
 .mig .x:hover{opacity:1;color:var(--crit)}
 .fb-toggle{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:var(--accent);font-weight:700;min-height:38px;white-space:nowrap}
 .fb-toggle:hover{border-color:var(--accent-2)}
+.fb-voltar{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 12px;color:var(--ink);font-weight:700;min-height:38px;white-space:nowrap}
+.fb-voltar:hover:not(:disabled){border-color:var(--accent-2);color:var(--accent)}
+.fb-voltar:disabled{opacity:.4;cursor:default}
 .fb-limpar{margin-left:auto;background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12.5px;color:var(--ink-2);white-space:nowrap;min-height:32px}
 .fb-limpar:hover{border-color:var(--crit);color:var(--crit)}
 #filtros-campos{margin-top:8px}
@@ -620,11 +623,95 @@ let filtrosAbertos = false; // painel de campos da barra de filtros (item 3 dos 
 function setFiltro(k,v){ estado.f[k]=v||''; estado.ordem=estado.ordem.filter(x=>x!==k); if(v) estado.ordem.push(k); Object.values(estado.loc).forEach(l=>{ if('page' in l) l.page=0; }); }
 function limparFiltros(){ estado.f=filtroVazio(); estado.ordem=[]; }
 
+// ---------- histórico de navegação/filtros/dados (botão "Voltar" ao lado de PAINEL GERAL) ----------
+// Guarda, na ordem em que aconteceram, tanto "fotos" do estado da tela (aba, filtro, busca,
+// ficha aberta, ordenar, página...) quanto ações que gravaram algo no sistema (inserir/editar/
+// excluir emenda ou ofício, editar município). "Voltar" desempilha e desfaz, uma ação de cada
+// vez — pedindo uma confirmação extra só quando a ação mexeu em dado gravado de verdade
+// (visível pra todo mundo que usa o sistema), do mesmo jeito que já é preciso confirmar pra
+// gravar. Esse histórico vive só nesta abertura do programa: começa vazio ao carregar a
+// página e some quando o programa é fechado — nunca é salvo em disco.
+// Por segurança, NÃO entram aqui: excluir município (apaga junto, sem volta, as emendas e
+// ofícios daquele município) e ações de usuários/senhas (login e acesso não se desfazem
+// sozinhos). Essas continuam só com a confirmação normal de sempre.
+let HIST = [];
+let desfazendo = false;
+function registrarHistorico(){
+  if(desfazendo) return;
+  HIST.push({tipo:'estado', ...JSON.parse(JSON.stringify({tab:estado.tab, q:estado.q, mun:estado.mun, f:estado.f, ordem:estado.ordem, loc:estado.loc, filtrosAbertos}))});
+  if(HIST.length>300) HIST.shift();
+}
+function registrarHistoricoDados(entry){
+  HIST.push({tipo:'dados', ...entry});
+  if(HIST.length>300) HIST.shift();
+}
+function desfazer(){
+  if(!HIST.length) return;
+  const topo = HIST[HIST.length-1];
+  if(topo.tipo==='dados'){ confirmarDesfazerDados(topo); return; }
+  const prev = HIST.pop();
+  desfazendo = true;
+  estado.tab=prev.tab; estado.q=prev.q; estado.mun=prev.mun; estado.f=prev.f; estado.ordem=prev.ordem; estado.loc=prev.loc;
+  filtrosAbertos = prev.filtrosAbertos;
+  const busca=$('#busca'); if(busca) busca.value = estado.q;
+  $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===estado.tab));
+  render();
+  window.scrollTo(0,0);
+  desfazendo = false;
+}
+const ROTULOS_ACAO_DADOS = {inserir_emenda:'inserir esta emenda', editar_emenda:'editar esta emenda', excluir_emenda:'excluir esta emenda', inserir_oficio:'inserir este ofício', editar_oficio:'editar este ofício', excluir_oficio:'excluir este ofício', editar_municipio:'editar os dados deste município'};
+function confirmarDesfazerDados(entry){
+  if(bloqueadoSemInternet()) return;
+  const msg = `Desfazer a ação "${ROTULOS_ACAO_DADOS[entry.acao]||entry.acao}"${entry.resumo?' ('+entry.resumo+')':''}? Isso muda o que está gravado no sistema, do mesmo jeito que vale pra todo mundo que usa.`;
+  confirmarAcao(msg, async ()=>{
+    try{
+      await executarDesfazerDados(entry);
+      HIST.pop();
+      recalcular();
+      fecharModal();
+      toast('Ação desfeita.');
+      render();
+    }catch(e){ toast(e.texto||e.message||'Não foi possível desfazer agora.','erro'); }
+  }, {titulo:'Desfazer ação', label:'Desfazer', perigo:false});
+}
+async function executarDesfazerDados(entry){
+  const token = SESSAO.token;
+  if(entry.acao==='inserir_emenda'){
+    await rpc('excluir_emenda',{p_token:token,p_id:entry.id});
+    const achado=acharEmendaPorId(entry.id);
+    if(achado) achado.municipio.emendas = achado.municipio.emendas.filter(e=>e.id!==entry.id);
+  } else if(entry.acao==='editar_emenda'){
+    await rpc('atualizar_emenda',{p_token:token,p_id:entry.id,p:entry.antes});
+    const achado=acharEmendaPorId(entry.id);
+    if(achado) Object.assign(achado.emenda, entry.antes, {situacao_grupo:grupoSituacao(entry.antes.situacao)});
+  } else if(entry.acao==='excluir_emenda'){
+    const r = await rpc('inserir_emenda',{p_token:token,p:{municipio_id:entry.municipioId, ...entry.antes}});
+    const alvo=acharMunicipioPorNome(entry.municipioNome);
+    if(alvo) alvo.emendas.push({id:r.id, ...entry.antes, situacao_grupo:grupoSituacao(entry.antes.situacao)});
+  } else if(entry.acao==='inserir_oficio'){
+    await rpc('excluir_oficio',{p_token:token,p_id:entry.id});
+    const achado=acharOficioPorId(entry.id);
+    if(achado) achado.municipio.oficios = achado.municipio.oficios.filter(o=>o.id!==entry.id);
+  } else if(entry.acao==='editar_oficio'){
+    await rpc('atualizar_oficio',{p_token:token,p_id:entry.id,p:entry.antes});
+    const achado=acharOficioPorId(entry.id);
+    if(achado) Object.assign(achado.oficio, entry.antes, {atendido_flag:(entry.antes.atendido||'').trim()?'SIM':'NÃO'});
+  } else if(entry.acao==='excluir_oficio'){
+    const r = await rpc('inserir_oficio',{p_token:token,p:{municipio_id:entry.municipioId, ...entry.antes}});
+    const alvo=acharMunicipioPorNome(entry.municipioNome);
+    if(alvo) alvo.oficios.push({id:r.id, ...entry.antes, atendido_flag:(entry.antes.atendido||'').trim()?'SIM':'NÃO'});
+  } else if(entry.acao==='editar_municipio'){
+    await rpc('atualizar_municipio',{p_token:token,p_id:entry.id,p:{nome:entry.antes.nome, regiao:entry.antes.regiao, dados:entry.antes.dados}});
+    const alvo=DADOS.find(m=>m.id===entry.id);
+    if(alvo){ const nomeAtual=alvo.municipio; alvo.municipio=entry.antes.nome; alvo.regiao=entry.antes.regiao; Object.assign(alvo, entry.antes.dados); if(estado.mun===nomeAtual) estado.mun=entry.antes.nome; }
+  }
+}
+
 // ---------- navegação ----------
 function go(tab){ estado.tab=tab; estado.mun=null; filtrosAbertos=false; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab)); render(); window.scrollTo(0,0); }
-$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ estado.q=''; $('#busca').value=''; go(b.dataset.tab); fecharMenu(); } });
-let tBusca; $('#busca').addEventListener('input', e=>{ clearTimeout(tBusca); tBusca=setTimeout(()=>{ estado.q=e.target.value.trim(); estado.mun=null; estado.tab = estado.q ? 'busca':'painel'; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===estado.tab)); render(); },180); });
-function abrirMunicipio(nome){ estado.mun=nome; render(); window.scrollTo(0,0); fecharMenu(); }
+$('#tabs').addEventListener('click', e=>{ const b=e.target.closest('button'); if(b){ registrarHistorico(); estado.q=''; $('#busca').value=''; go(b.dataset.tab); fecharMenu(); } });
+let tBusca; $('#busca').addEventListener('input', e=>{ clearTimeout(tBusca); tBusca=setTimeout(()=>{ registrarHistorico(); estado.q=e.target.value.trim(); estado.mun=null; estado.tab = estado.q ? 'busca':'painel'; $$('#tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===estado.tab)); render(); },180); });
+function abrirMunicipio(nome){ registrarHistorico(); estado.mun=nome; render(); window.scrollTo(0,0); fecharMenu(); }
 
 // ---------- cabeçalho compacto: menu recolhido (abas, busca, atualização, usuário) ----------
 let menuAberto = false;
@@ -634,11 +721,12 @@ $('#btn-menu').addEventListener('click', e=>{ e.stopPropagation(); menuAberto ? 
 document.addEventListener('click', e=>{ if(!menuAberto) return; if(e.target.closest('#menu-painel')||e.target.closest('#btn-menu')) return; fecharMenu(); });
 
 document.addEventListener('click', e=>{
+  const vt=e.target.closest('[data-voltar]'); if(vt){ e.preventDefault(); desfazer(); return; }
   const a=e.target.closest('[data-mun]'); if(a){ e.preventDefault(); abrirMunicipio(a.dataset.mun); return; }
-  const fi=e.target.closest('[data-filtro]'); if(fi){ e.preventDefault(); const [k,v]=JSON.parse(fi.dataset.filtro); setFiltro(k,v); filtrosAbertos=false; go(fi.dataset.aba || ((estado.tab==='busca'||estado.mun) ? 'painel' : estado.tab)); return; }
-  const rm=e.target.closest('[data-rem]'); if(rm){ e.preventDefault(); e.stopPropagation(); setFiltro(rm.dataset.rem,''); filtrosAbertos=false; render(); return; }
-  const lt=e.target.closest('[data-limpar-tudo]'); if(lt){ e.preventDefault(); limparFiltros(); filtrosAbertos=false; render(); return; }
-  const t=e.target.closest('[data-go]'); if(t){ e.preventDefault(); const p=JSON.parse(t.dataset.go); if(p.filtros){ limparFiltros(); Object.entries(p.filtros).forEach(([k,v])=>setFiltro(k,v)); } filtrosAbertos=false; go(p.tab); return; }
+  const fi=e.target.closest('[data-filtro]'); if(fi){ e.preventDefault(); registrarHistorico(); const [k,v]=JSON.parse(fi.dataset.filtro); setFiltro(k,v); filtrosAbertos=false; go(fi.dataset.aba || ((estado.tab==='busca'||estado.mun) ? 'painel' : estado.tab)); return; }
+  const rm=e.target.closest('[data-rem]'); if(rm){ e.preventDefault(); e.stopPropagation(); registrarHistorico(); setFiltro(rm.dataset.rem,''); filtrosAbertos=false; render(); return; }
+  const lt=e.target.closest('[data-limpar-tudo]'); if(lt){ e.preventDefault(); registrarHistorico(); limparFiltros(); filtrosAbertos=false; render(); return; }
+  const t=e.target.closest('[data-go]'); if(t){ e.preventDefault(); registrarHistorico(); const p=JSON.parse(t.dataset.go); if(p.filtros){ limparFiltros(); Object.entries(p.filtros).forEach(([k,v])=>setFiltro(k,v)); } filtrosAbertos=false; go(p.tab); return; }
   // ---- ações de dados (perfis inseridor/gestor) ----
   const einE=e.target.closest('[data-inserir-emenda]'); if(einE){ e.preventDefault(); if(!pode('inserir_emenda')){ toast('Seu perfil não pode inserir emendas.','erro'); return; } abrirFormEmenda(einE.dataset.inserirEmenda||null); return; }
   const einO=e.target.closest('[data-inserir-oficio]'); if(einO){ e.preventDefault(); if(!pode('inserir_oficio')){ toast('Seu perfil não pode inserir ofícios.','erro'); return; } abrirFormOficio(einO.dataset.inserirOficio||null); return; }
@@ -688,6 +776,7 @@ function barraFiltros(camposExtras=''){
   const f=estado.f, ordem=estado.ordem;
   const chips = ordem.map(k=>`<span class="mig" data-rem="${k}" title="Clique para tirar este filtro"><span class="k">${DIMS[k]}:</span>${esc(rotFiltro(k,f[k]))}<span class="x">✕</span></span>`).join('');
   const linha = `<div class="fb-linha1">
+    <button type="button" class="fb-voltar" data-voltar title="Desfaz a última ação (filtro, aba, ficha aberta…) desta sessão" ${HIST.length?'':'disabled'}>↶ Voltar</button>
     <span class="fb-geral">PAINEL GERAL</span>
     <button type="button" class="fb-toggle" id="fb-toggle" aria-expanded="${filtrosAbertos?'true':'false'}">Filtros <span class="seta">${filtrosAbertos?'▴':'▾'}</span></button>
     ${ordem.length?'<button type="button" class="fb-limpar" data-limpar-tudo>Limpar tudo</button>':''}
@@ -704,9 +793,9 @@ function ligarCombos(el, cb){
     const mostrar=()=>{ const q=norm(inp.value).trim(); const hits=(q?opcoes.filter(o=>norm(o).includes(q)):opcoes).slice(0,80); sel=-1;
       lista.innerHTML = hits.length ? hits.map(o=>`<div data-v="${esc(o)}">${hl(rot(o),inp.value)}</div>`).join('') : `<div class="vazio">nenhuma opção com “${esc(inp.value)}” — o filtro usa o texto digitado (contém)</div>`;
       lista.classList.remove('hidden'); };
-    const aplicar=v=>{ clearTimeout(tmr); inp.value=v; setFiltro(id,v); lista.classList.add('hidden'); cb(false); };
+    const aplicar=v=>{ clearTimeout(tmr); registrarHistorico(); inp.value=v; setFiltro(id,v); lista.classList.add('hidden'); cb(false); };
     inp.addEventListener('focus', mostrar);
-    inp.addEventListener('input', ()=>{ mostrar(); limpa.style.display=inp.value?'':'none'; clearTimeout(tmr); tmr=setTimeout(()=>{ setFiltro(id,inp.value); cb(true); },300); });
+    inp.addEventListener('input', ()=>{ mostrar(); limpa.style.display=inp.value?'':'none'; clearTimeout(tmr); tmr=setTimeout(()=>{ registrarHistorico(); setFiltro(id,inp.value); cb(true); },300); });
     inp.addEventListener('keydown', e=>{ const its=$$('div[data-v]',lista); if(e.key==='ArrowDown'){ sel=Math.min(sel+1,its.length-1); its.forEach((d,i)=>d.classList.toggle('sel',i===sel)); its[sel]&&its[sel].scrollIntoView({block:'nearest'}); e.preventDefault(); }
       else if(e.key==='ArrowUp'){ sel=Math.max(sel-1,0); its.forEach((d,i)=>d.classList.toggle('sel',i===sel)); e.preventDefault(); }
       else if(e.key==='Enter'){ e.preventDefault(); if(sel>=0&&its[sel]) aplicar(its[sel].dataset.v); else if(its.length===1) aplicar(its[0].dataset.v); else aplicar(inp.value); }
@@ -717,9 +806,14 @@ function ligarCombos(el, cb){
   });
 }
 function ligarLocais(el, l, cb){ // campos locais da aba (busca por texto, ordenação, paginação)
-  $$('[data-l]', el).forEach(i=>i.addEventListener(i.tagName==='SELECT'?'change':'input', e=>{ l[i.dataset.l]=e.target.value; if('page' in l) l.page=0; cb(true); }));
-  $$('[data-sort]', el).forEach(t=>t.addEventListener('click', ()=>{ const k=t.dataset.sort; if(l.sort===k) l.dir=-l.dir; else { l.sort=k; l.dir = (k==='valor'||k==='valor_solicitado'||k==='ano')?-1:1; } cb(); }));
-  $$('[data-pg]', el).forEach(b=>b.addEventListener('click', ()=>{ l.page+=Number(b.dataset.pg); cb(); }));
+  let tHist=null;
+  $$('[data-l]', el).forEach(i=>i.addEventListener(i.tagName==='SELECT'?'change':'input', e=>{
+    if(i.tagName==='SELECT'){ registrarHistorico(); }
+    else { if(!tHist) registrarHistorico(); clearTimeout(tHist); tHist=setTimeout(()=>{ tHist=null; },500); } // junta as teclas digitadas numa só ação p/ desfazer
+    l[i.dataset.l]=e.target.value; if('page' in l) l.page=0; cb(true);
+  }));
+  $$('[data-sort]', el).forEach(t=>t.addEventListener('click', ()=>{ registrarHistorico(); const k=t.dataset.sort; if(l.sort===k) l.dir=-l.dir; else { l.sort=k; l.dir = (k==='valor'||k==='valor_solicitado'||k==='ano')?-1:1; } cb(); }));
+  $$('[data-pg]', el).forEach(b=>b.addEventListener('click', ()=>{ registrarHistorico(); l.page+=Number(b.dataset.pg); cb(); }));
 }
 // atualiza só as partes de #barra que podem mudar sem digitação (migalhas, "Limpar tudo", estado "ativo" dos combos)
 // — nunca recria os <input>, então o combo em digitação e o teclado do celular não são perdidos.
@@ -732,6 +826,7 @@ function atualizarBarra(){
     if(!btn){ const linha=$('.fb-linha1', barraEl); if(linha){ btn=document.createElement('button'); btn.type='button'; btn.className='fb-limpar'; btn.setAttribute('data-limpar-tudo',''); btn.textContent='Limpar tudo'; linha.appendChild(btn); } }
   } else if(btn){ btn.remove(); }
   $$('.combo', barraEl).forEach(c=>{ const inp=$('input',c); if(!inp||inp===document.activeElement) return; const id=inp.dataset.f; inp.classList.toggle('ativo', !!estado.f[id]); const lm=$('.limpa',c); if(lm) lm.style.display = estado.f[id] ? '' : 'none'; });
+  const bv=$('.fb-voltar', barraEl); if(bv) bv.disabled = !HIST.length;
 }
 // liga a barra de filtros (combos + campo(s) locais da aba). Chamada só quando #barra é reconstruída inteira.
 function ligarBarra(l, renderFn){
@@ -864,7 +959,7 @@ function renderFicha(m){
   const acoesTab = souGestor();
   $('#barra').innerHTML='';
   $('#conteudo').innerHTML=`<div class="ficha-top"><div><h1>${esc(tituloCase(m.municipio))}</h1><div class="sub">${esc(m.regiao||'')}${m.aniversario?` · aniversário da cidade: ${esc(m.aniversario.toLowerCase())}`:''}</div></div>
-    <div><button class="btn" data-go='{"tab":"municipios"}'>‹ Voltar</button> <button class="btn primary" ${fAttr('municipio',m.municipio,'painel')}>Explorar no painel</button> <button class="btn" onclick="window.print()">Imprimir</button>
+    <div><button class="btn" data-voltar ${HIST.length?'':'disabled'}>‹ Voltar</button> <button class="btn primary" ${fAttr('municipio',m.municipio,'painel')}>Explorar no painel</button> <button class="btn" onclick="window.print()">Imprimir</button>
     ${pode('inserir_emenda')?`<button class="btn" data-inserir-emenda="${esc(m.municipio)}">＋ Inserir emenda</button>`:''}
     ${pode('inserir_oficio')?`<button class="btn" data-inserir-oficio="${esc(m.municipio)}">＋ Inserir ofício</button>`:''}
     ${souGestor()?`<button class="btn" data-editar-municipio="${esc(m.municipio)}">Editar dados do município</button><button class="btn" data-excluir-municipio="${esc(m.municipio)}">🗑 Excluir município</button>`:''}
@@ -1147,14 +1242,18 @@ function confirmarEmenda(p, emendaId){
   $('#cfe-confirmar').addEventListener('click', async ()=>{
     try{
       if(emendaId!=null){
+        const achadoAntes=acharEmendaPorId(emendaId);
+        const antes = achadoAntes ? {ministerio:achadoAntes.emenda.ministerio,ano:achadoAntes.emenda.ano,objeto:achadoAntes.emenda.objeto,valor:achadoAntes.emenda.valor,situacao:achadoAntes.emenda.situacao} : null;
         await rpc('atualizar_emenda',{p_token:SESSAO.token,p_id:emendaId,p:{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao}});
         const achado=acharEmendaPorId(emendaId);
         if(achado) Object.assign(achado.emenda,{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao,situacao_grupo:grupoSituacao(p.situacao)});
+        if(antes) registrarHistoricoDados({acao:'editar_emenda', id:emendaId, antes, resumo:p.objeto});
       } else {
         const alvo=acharMunicipioPorNome(p.municipio);
         if(!alvo){ toast('Município não encontrado na base. Verifique o nome (escolha da lista de sugestões).','erro'); return; }
         const r=await rpc('inserir_emenda',{p_token:SESSAO.token,p:{municipio_id:alvo.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao}});
         alvo.emendas.push({id:r.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao,situacao_grupo:grupoSituacao(p.situacao)});
+        if(souGestor()) registrarHistoricoDados({acao:'inserir_emenda', id:r.id, resumo:p.objeto}); // excluir (o desfazer) só é permitido a gestor
       }
       aposGravar('Registrado com sucesso.');
     }catch(e){ toast(e.texto||e.message,'erro'); }
@@ -1164,7 +1263,13 @@ function excluirEmenda(id){
   if(bloqueadoSemInternet()) return;
   const achado=acharEmendaPorId(id); if(!achado) return;
   confirmarAcao(`Excluir a emenda "${achado.emenda.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
-    try{ await rpc('excluir_emenda',{p_token:SESSAO.token,p_id:id}); achado.municipio.emendas=achado.municipio.emendas.filter(e=>e.id!==id); aposGravar('Emenda excluída.'); }
+    try{
+      const antes = {ministerio:achado.emenda.ministerio,ano:achado.emenda.ano,objeto:achado.emenda.objeto,valor:achado.emenda.valor,situacao:achado.emenda.situacao};
+      await rpc('excluir_emenda',{p_token:SESSAO.token,p_id:id});
+      achado.municipio.emendas=achado.municipio.emendas.filter(e=>e.id!==id);
+      registrarHistoricoDados({acao:'excluir_emenda', municipioNome:achado.municipio.municipio, municipioId:achado.municipio.id, antes, resumo:antes.objeto});
+      aposGravar('Emenda excluída.');
+    }
     catch(e){ toast(e.texto||e.message,'erro'); }
   }, {titulo:'Confirmar exclusão', label:'Excluir'});
 }
@@ -1211,14 +1316,18 @@ function confirmarOficio(p, oficioId){
   $('#cfo-confirmar').addEventListener('click', async ()=>{
     try{
       if(oficioId!=null){
+        const achadoAntes=acharOficioPorId(oficioId);
+        const antes = achadoAntes ? {ministerio:achadoAntes.oficio.ministerio,ano:achadoAntes.oficio.ano,objeto:achadoAntes.oficio.objeto,valor_solicitado:achadoAntes.oficio.valor_solicitado,recebido:achadoAntes.oficio.recebido,data_recebido:achadoAntes.oficio.data_recebido,solicitante:achadoAntes.oficio.solicitante,atendido:achadoAntes.oficio.atendido} : null;
         await rpc('atualizar_oficio',{p_token:SESSAO.token,p_id:oficioId,p:{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido}});
         const achado=acharOficioPorId(oficioId);
         if(achado) Object.assign(achado.oficio,{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido,atendido_flag:(p.atendido||'').trim()?'SIM':'NÃO'});
+        if(antes) registrarHistoricoDados({acao:'editar_oficio', id:oficioId, antes, resumo:p.objeto});
       } else {
         const alvo=acharMunicipioPorNome(p.municipio);
         if(!alvo){ toast('Município não encontrado na base. Verifique o nome (escolha da lista de sugestões).','erro'); return; }
         const r=await rpc('inserir_oficio',{p_token:SESSAO.token,p:{municipio_id:alvo.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido}});
         alvo.oficios.push({id:r.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido,atendido_flag:(p.atendido||'').trim()?'SIM':'NÃO'});
+        if(souGestor()) registrarHistoricoDados({acao:'inserir_oficio', id:r.id, resumo:p.objeto}); // excluir (o desfazer) só é permitido a gestor
       }
       aposGravar('Registrado com sucesso.');
     }catch(e){ toast(e.texto||e.message,'erro'); }
@@ -1228,7 +1337,13 @@ function excluirOficio(id){
   if(bloqueadoSemInternet()) return;
   const achado=acharOficioPorId(id); if(!achado) return;
   confirmarAcao(`Excluir o ofício "${achado.oficio.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
-    try{ await rpc('excluir_oficio',{p_token:SESSAO.token,p_id:id}); achado.municipio.oficios=achado.municipio.oficios.filter(o=>o.id!==id); aposGravar('Ofício excluído.'); }
+    try{
+      const antes = {ministerio:achado.oficio.ministerio,ano:achado.oficio.ano,objeto:achado.oficio.objeto,valor_solicitado:achado.oficio.valor_solicitado,recebido:achado.oficio.recebido,data_recebido:achado.oficio.data_recebido,solicitante:achado.oficio.solicitante,atendido:achado.oficio.atendido};
+      await rpc('excluir_oficio',{p_token:SESSAO.token,p_id:id});
+      achado.municipio.oficios=achado.municipio.oficios.filter(o=>o.id!==id);
+      registrarHistoricoDados({acao:'excluir_oficio', municipioNome:achado.municipio.municipio, municipioId:achado.municipio.id, antes, resumo:antes.objeto});
+      aposGravar('Ofício excluído.');
+    }
     catch(e){ toast(e.texto||e.message,'erro'); }
   }, {titulo:'Confirmar exclusão', label:'Excluir'});
 }
@@ -1322,9 +1437,12 @@ function confirmarMunicipio(d, nomeAnterior){
       if(nomeAnterior){
         const alvo = acharMunicipioPorNome(nomeAnterior);
         if(!alvo){ toast('Município não encontrado.','erro'); return; }
+        const antesDados = Object.fromEntries(Object.keys(dadosRest).map(k=>[k, JSON.parse(JSON.stringify(alvo[k]!==undefined?alvo[k]:null))]));
+        const antes = {id:alvo.id, nome:alvo.municipio, regiao:alvo.regiao, dados:antesDados};
         await rpc('atualizar_municipio',{p_token:SESSAO.token,p_id:alvo.id,p:{nome:nomeFinal, regiao, dados:dadosRest}});
         alvo.municipio = nomeFinal; alvo.regiao = regiao; Object.assign(alvo, dadosRest);
         if(estado.mun===nomeAnterior) estado.mun=nomeFinal;
+        registrarHistoricoDados({acao:'editar_municipio', id:antes.id, antes, resumo:tituloCase(antes.nome)});
       } else {
         const r = await rpc('inserir_municipio',{p_token:SESSAO.token,p:{nome:nomeFinal, regiao, tipo:'municipio', dados:dadosRest}});
         DADOS.push(Object.assign({id:r.id, municipio:nomeFinal, tipo:'municipio', regiao, emendas:[], oficios:[]}, dadosRest));
