@@ -418,7 +418,11 @@ function grupoSituacao(s){
 
 // ---------- RPC (fetch puro, sem bibliotecas) ----------
 class RpcError extends Error{ constructor(codigo, texto){ super(texto); this.codigo=codigo; this.texto=texto; } }
-async function rpc(fn, args={}){
+// opts.silencioso=true: usado nas atualizações automáticas em segundo plano —
+// se a sessão salva não valer mais, NÃO joga a tela de login por cima do que já
+// está sendo mostrado (os dados salvos no aparelho continuam na tela); o login só
+// volta a ser pedido da próxima vez que o app abrir sem dados salvos para mostrar.
+async function rpc(fn, args={}, opts={}){
   let r;
   try{
     r = await fetch(SUPABASE_URL+'/rest/v1/rpc/'+fn, {
@@ -433,7 +437,10 @@ async function rpc(fn, args={}){
     const i = String(raw).indexOf(': ');
     const codigo = i>=0 ? raw.slice(0,i) : '';
     const texto = i>=0 ? raw.slice(i+2) : raw;
-    if(codigo==='SESSAO_INVALIDA'){ localStorage.removeItem('cmgo_token'); SESSAO=null; mostrarLogin(texto); }
+    if(codigo==='SESSAO_INVALIDA'){
+      localStorage.removeItem('cmgo_token');
+      if(!opts.silencioso){ SESSAO=null; mostrarLogin(texto); }
+    }
     throw new RpcError(codigo, texto);
   }
   return j;
@@ -1407,6 +1414,7 @@ async function carregarTudo(){
     if(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA'){ esconderOverlays(); return; }
     const usadoCache = await tentarUsarCache(SESSAO.token);
     if(!usadoCache){ esconderOverlays(); toast(e.texto||e.message,'erro'); }
+    else if(navigator.onLine) sincronizar(false);
   }
 }
 
@@ -1427,12 +1435,23 @@ async function tentarUsarCache(token){
 }
 
 // ---------- re-sincronizar (botão "Atualizar agora", voltar internet, voltar ao app) ----------
+// Nunca apaga os dados que já estão na tela/salvos no aparelho enquanto busca:
+// só troca DADOS e o que está salvo (idbSalvar) depois que a busca vier 100% completa.
+// Silenciosa (manual=false): roda por trás, sem travar nem tirar a pessoa da tela atual,
+// mesmo que a sessão salva tenha vencido (aí só some o aviso "atualizado" e segue offline).
+// As informações não mudam a toda hora — por isso a checagem automática é no máximo
+// 1x por dia (ao abrir o app / voltar a internet); pra forçar na hora, usa o botão
+// "Atualizar agora" do menu.
+const INTERVALO_AUTO_SYNC = 24*60*60*1000;
 async function sincronizar(manual){
   if(!SESSAO) return;
+  if(!manual){
+    if(ULTIMA_ATUALIZACAO && (Date.now()-ULTIMA_ATUALIZACAO.getTime()) < INTERVALO_AUTO_SYNC) return;
+  }
   if(manual) toast('Atualizando…');
   try{
     if(!navigator.onLine) throw new RpcError('SEM_CONEXAO','Sem internet.');
-    const arr = await comTempoLimite(rpc('carregar_dados', {p_token:SESSAO.token}), 8000);
+    const arr = await comTempoLimite(rpc('carregar_dados', {p_token:SESSAO.token}, {silencioso:!manual}), 8000);
     DADOS = arr;
     recalcular();
     ULTIMA_ATUALIZACAO = new Date();
@@ -1441,9 +1460,8 @@ async function sincronizar(manual){
     renderCabecalho();
     if(estado.mun && !byName[estado.mun]) estado.mun=null;
     render();
-    toast('Informação atualizada.');
+    if(manual) toast('Informação atualizada.');
   }catch(e){
-    if(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA') return;
     OFFLINE = true;
     renderCabecalho();
     if(manual) toast('Não foi possível atualizar agora. Confira sua internet.','erro');
@@ -1451,11 +1469,12 @@ async function sincronizar(manual){
 }
 function atualizarAgora(){ sincronizar(true); }
 function ligarEventosRede(){
+  // Checagem automática (no máximo 1x por dia, ver INTERVALO_AUTO_SYNC acima):
+  // ao voltar a internet e ao voltar a abrir/olhar o app.
   window.addEventListener('online', () => { if(SESSAO) sincronizar(false); });
   document.addEventListener('visibilitychange', () => {
     if(document.visibilityState!=='visible' || !SESSAO || !navigator.onLine) return;
-    const passouTempo = !ULTIMA_ATUALIZACAO || (Date.now()-ULTIMA_ATUALIZACAO.getTime()) > 10*60*1000;
-    if(passouTempo) sincronizar(false);
+    sincronizar(false);
   });
 }
 
@@ -1499,6 +1518,9 @@ async function sair(){
 }
 
 // ---------- inicialização ----------
+// Regra fixa: a tela nunca fica esperando a internet para mostrar informação.
+// Primeiro mostra o que já está salvo no aparelho (se houver); só depois — e só
+// por trás, sem travar nem interromper — confere se há algo mais novo no servidor.
 async function iniciar(){
   registrarSW();
   ligarEventosRede();
@@ -1507,17 +1529,21 @@ async function iniciar(){
     mostrarLogin(navigator.onLine ? null : 'Sem internet. Entre com internet pelo menos uma vez neste aparelho para usar sem sinal.');
     return;
   }
-  mostrarOverlay('carregando');
+  const usadoCache = await tentarUsarCache(token);
+  if(!usadoCache) mostrarOverlay('carregando');
+  if(!navigator.onLine){
+    if(!usadoCache) mostrarLogin('Sem internet. Entre com internet pelo menos uma vez neste aparelho para usar sem sinal.');
+    return;
+  }
   try{
-    if(!navigator.onLine) throw new RpcError('SEM_CONEXAO','Sem internet.');
-    const r = await comTempoLimite(rpc('sessao', {p_token:token}), 8000);
+    const r = await comTempoLimite(rpc('sessao', {p_token:token}, {silencioso:usadoCache}), 8000);
     SESSAO = {token, usuario:r.usuario};
-    if(SESSAO.usuario.precisa_trocar){ mostrarOverlay('troca-overlay'); return; }
-    await carregarTudo();
+    if(SESSAO.usuario.precisa_trocar){ if(!usadoCache) mostrarOverlay('troca-overlay'); return; }
+    if(usadoCache) sincronizar(false); else await carregarTudo();
   }catch(e){
+    if(usadoCache) return; // já mostrando os dados salvos: segue offline, sem interromper.
     if(e instanceof RpcError && e.codigo==='SESSAO_INVALIDA'){ localStorage.removeItem('cmgo_token'); mostrarLogin(); return; }
-    const usadoCache = await tentarUsarCache(token);
-    if(!usadoCache) mostrarLogin();
+    mostrarLogin();
   }
 }
 iniciar();

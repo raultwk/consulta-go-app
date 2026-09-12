@@ -1,11 +1,14 @@
 // Service worker do "Consulta Municípios GO".
 // Cacheia só o "casco" do app (HTML/manifest/ícones) para abrir sem internet.
-// Estratégia do index.html: rede primeiro, cache como reserva (assim uma publicação
-// nova chega quando há internet). Ícones: cache primeiro (mudam muito pouco).
+// Estratégia: SEMPRE responde com o que já está salvo no aparelho na hora (nunca
+// espera a rede para abrir a tela); se há internet, busca uma versão nova por trás
+// e só troca o que está salvo depois que a versão nova chegar 100% completa —
+// ela vale a partir da próxima abertura do app (nada é apagado antes de a nova
+// versão estar toda baixada).
 // Requisições para o Supabase (dados) NUNCA passam pelo cache deste service worker.
-// 20260910185350 é substituído pela data/hora da publicação em ferramentas/publicar_app.py
+// 20260912060541 é substituído pela data/hora da publicação em ferramentas/publicar_app.py
 // (em app/sw.js, para desenvolvimento, fica com o marcador mesmo).
-const VERSAO = '20260910185350';
+const VERSAO = '20260912060541';
 const CACHE_NOME = 'cmgo-' + VERSAO;
 const CASCO = [
   './',
@@ -42,26 +45,14 @@ self.addEventListener('fetch', event => {
   // Só cuida de pedidos de mesma origem (o casco do app).
   if (url.origin !== self.location.origin) return;
 
-  const ehIcone = url.pathname.includes('/icones/');
-
-  if (ehIcone) {
-    // Ícones: cache primeiro (raramente mudam).
-    event.respondWith(
-      caches.match(req).then(resp => resp || fetch(req).then(r => {
-        const copia = r.clone();
-        caches.open(CACHE_NOME).then(cache => cache.put(req, copia));
-        return r;
-      }))
-    );
-    return;
-  }
-
-  // HTML / manifest / demais arquivos do casco: rede primeiro, cache como reserva.
+  // Casco do app (HTML, manifest, ícones): responde na hora com o que já está
+  // salvo e, se houver internet, busca uma versão nova por trás para a próxima vez.
+  const buscaNova = fetch(req).then(r => {
+    if (r && r.ok) caches.open(CACHE_NOME).then(cache => cache.put(req, r.clone()));
+    return r;
+  }).catch(() => null);
+  event.waitUntil(buscaNova);
   event.respondWith(
-    fetch(req).then(r => {
-      const copia = r.clone();
-      caches.open(CACHE_NOME).then(cache => cache.put(req, copia));
-      return r;
-    }).catch(() => caches.match(req).then(resp => resp || caches.match('./index.html')))
+    caches.match(req).then(respSalva => respSalva || buscaNova.then(r => r || caches.match('./index.html')))
   );
 });
