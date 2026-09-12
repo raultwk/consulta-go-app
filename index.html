@@ -623,32 +623,21 @@ let filtrosAbertos = false; // painel de campos da barra de filtros (item 3 dos 
 function setFiltro(k,v){ estado.f[k]=v||''; estado.ordem=estado.ordem.filter(x=>x!==k); if(v) estado.ordem.push(k); Object.values(estado.loc).forEach(l=>{ if('page' in l) l.page=0; }); }
 function limparFiltros(){ estado.f=filtroVazio(); estado.ordem=[]; }
 
-// ---------- histórico de navegação/filtros/dados (botão "Voltar" ao lado de PAINEL GERAL) ----------
-// Guarda, na ordem em que aconteceram, tanto "fotos" do estado da tela (aba, filtro, busca,
-// ficha aberta, ordenar, página...) quanto ações que gravaram algo no sistema (inserir/editar/
-// excluir emenda ou ofício, editar município). "Voltar" desempilha e desfaz, uma ação de cada
-// vez — pedindo uma confirmação extra só quando a ação mexeu em dado gravado de verdade
-// (visível pra todo mundo que usa o sistema), do mesmo jeito que já é preciso confirmar pra
-// gravar. Esse histórico vive só nesta abertura do programa: começa vazio ao carregar a
-// página e some quando o programa é fechado — nunca é salvo em disco.
-// Por segurança, NÃO entram aqui: excluir município (apaga junto, sem volta, as emendas e
-// ofícios daquele município) e ações de usuários/senhas (login e acesso não se desfazem
-// sozinhos). Essas continuam só com a confirmação normal de sempre.
+// ---------- histórico de navegação/filtros (botão "Voltar" ao lado de PAINEL GERAL) ----------
+// Guarda uma "foto" do estado ANTES de cada ação (aba, filtro, busca, ficha aberta, ordenar,
+// página...). "Voltar" desempilha e restaura, uma ação de cada vez. Só cobre navegação e
+// filtros — ações que gravam dado de verdade (inserir/editar/excluir) já têm seus próprios
+// botões e confirmações, e não entram neste histórico. Vive só nesta abertura do programa:
+// começa vazio ao carregar a página e some quando o programa é fechado — nunca é salvo em disco.
 let HIST = [];
 let desfazendo = false;
 function registrarHistorico(){
   if(desfazendo) return;
-  HIST.push({tipo:'estado', ...JSON.parse(JSON.stringify({tab:estado.tab, q:estado.q, mun:estado.mun, f:estado.f, ordem:estado.ordem, loc:estado.loc, filtrosAbertos}))});
-  if(HIST.length>300) HIST.shift();
-}
-function registrarHistoricoDados(entry){
-  HIST.push({tipo:'dados', ...entry});
+  HIST.push(JSON.parse(JSON.stringify({tab:estado.tab, q:estado.q, mun:estado.mun, f:estado.f, ordem:estado.ordem, loc:estado.loc, filtrosAbertos})));
   if(HIST.length>300) HIST.shift();
 }
 function desfazer(){
   if(!HIST.length) return;
-  const topo = HIST[HIST.length-1];
-  if(topo.tipo==='dados'){ confirmarDesfazerDados(topo); return; }
   const prev = HIST.pop();
   desfazendo = true;
   estado.tab=prev.tab; estado.q=prev.q; estado.mun=prev.mun; estado.f=prev.f; estado.ordem=prev.ordem; estado.loc=prev.loc;
@@ -658,53 +647,6 @@ function desfazer(){
   render();
   window.scrollTo(0,0);
   desfazendo = false;
-}
-const ROTULOS_ACAO_DADOS = {inserir_emenda:'inserir esta emenda', editar_emenda:'editar esta emenda', excluir_emenda:'excluir esta emenda', inserir_oficio:'inserir este ofício', editar_oficio:'editar este ofício', excluir_oficio:'excluir este ofício', editar_municipio:'editar os dados deste município'};
-function confirmarDesfazerDados(entry){
-  if(bloqueadoSemInternet()) return;
-  const msg = `Desfazer a ação "${ROTULOS_ACAO_DADOS[entry.acao]||entry.acao}"${entry.resumo?' ('+entry.resumo+')':''}? Isso muda o que está gravado no sistema, do mesmo jeito que vale pra todo mundo que usa.`;
-  confirmarAcao(msg, async ()=>{
-    try{
-      await executarDesfazerDados(entry);
-      HIST.pop();
-      recalcular();
-      fecharModal();
-      toast('Ação desfeita.');
-      render();
-    }catch(e){ toast(e.texto||e.message||'Não foi possível desfazer agora.','erro'); }
-  }, {titulo:'Desfazer ação', label:'Desfazer', perigo:false});
-}
-async function executarDesfazerDados(entry){
-  const token = SESSAO.token;
-  if(entry.acao==='inserir_emenda'){
-    await rpc('excluir_emenda',{p_token:token,p_id:entry.id});
-    const achado=acharEmendaPorId(entry.id);
-    if(achado) achado.municipio.emendas = achado.municipio.emendas.filter(e=>e.id!==entry.id);
-  } else if(entry.acao==='editar_emenda'){
-    await rpc('atualizar_emenda',{p_token:token,p_id:entry.id,p:entry.antes});
-    const achado=acharEmendaPorId(entry.id);
-    if(achado) Object.assign(achado.emenda, entry.antes, {situacao_grupo:grupoSituacao(entry.antes.situacao)});
-  } else if(entry.acao==='excluir_emenda'){
-    const r = await rpc('inserir_emenda',{p_token:token,p:{municipio_id:entry.municipioId, ...entry.antes}});
-    const alvo=acharMunicipioPorNome(entry.municipioNome);
-    if(alvo) alvo.emendas.push({id:r.id, ...entry.antes, situacao_grupo:grupoSituacao(entry.antes.situacao)});
-  } else if(entry.acao==='inserir_oficio'){
-    await rpc('excluir_oficio',{p_token:token,p_id:entry.id});
-    const achado=acharOficioPorId(entry.id);
-    if(achado) achado.municipio.oficios = achado.municipio.oficios.filter(o=>o.id!==entry.id);
-  } else if(entry.acao==='editar_oficio'){
-    await rpc('atualizar_oficio',{p_token:token,p_id:entry.id,p:entry.antes});
-    const achado=acharOficioPorId(entry.id);
-    if(achado) Object.assign(achado.oficio, entry.antes, {atendido_flag:(entry.antes.atendido||'').trim()?'SIM':'NÃO'});
-  } else if(entry.acao==='excluir_oficio'){
-    const r = await rpc('inserir_oficio',{p_token:token,p:{municipio_id:entry.municipioId, ...entry.antes}});
-    const alvo=acharMunicipioPorNome(entry.municipioNome);
-    if(alvo) alvo.oficios.push({id:r.id, ...entry.antes, atendido_flag:(entry.antes.atendido||'').trim()?'SIM':'NÃO'});
-  } else if(entry.acao==='editar_municipio'){
-    await rpc('atualizar_municipio',{p_token:token,p_id:entry.id,p:{nome:entry.antes.nome, regiao:entry.antes.regiao, dados:entry.antes.dados}});
-    const alvo=DADOS.find(m=>m.id===entry.id);
-    if(alvo){ const nomeAtual=alvo.municipio; alvo.municipio=entry.antes.nome; alvo.regiao=entry.antes.regiao; Object.assign(alvo, entry.antes.dados); if(estado.mun===nomeAtual) estado.mun=entry.antes.nome; }
-  }
 }
 
 // ---------- navegação ----------
@@ -1242,18 +1184,14 @@ function confirmarEmenda(p, emendaId){
   $('#cfe-confirmar').addEventListener('click', async ()=>{
     try{
       if(emendaId!=null){
-        const achadoAntes=acharEmendaPorId(emendaId);
-        const antes = achadoAntes ? {ministerio:achadoAntes.emenda.ministerio,ano:achadoAntes.emenda.ano,objeto:achadoAntes.emenda.objeto,valor:achadoAntes.emenda.valor,situacao:achadoAntes.emenda.situacao} : null;
         await rpc('atualizar_emenda',{p_token:SESSAO.token,p_id:emendaId,p:{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao}});
         const achado=acharEmendaPorId(emendaId);
         if(achado) Object.assign(achado.emenda,{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao,situacao_grupo:grupoSituacao(p.situacao)});
-        if(antes) registrarHistoricoDados({acao:'editar_emenda', id:emendaId, antes, resumo:p.objeto});
       } else {
         const alvo=acharMunicipioPorNome(p.municipio);
         if(!alvo){ toast('Município não encontrado na base. Verifique o nome (escolha da lista de sugestões).','erro'); return; }
         const r=await rpc('inserir_emenda',{p_token:SESSAO.token,p:{municipio_id:alvo.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao}});
         alvo.emendas.push({id:r.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor:p.valor,situacao:p.situacao,situacao_grupo:grupoSituacao(p.situacao)});
-        if(souGestor()) registrarHistoricoDados({acao:'inserir_emenda', id:r.id, resumo:p.objeto}); // excluir (o desfazer) só é permitido a gestor
       }
       aposGravar('Registrado com sucesso.');
     }catch(e){ toast(e.texto||e.message,'erro'); }
@@ -1263,13 +1201,7 @@ function excluirEmenda(id){
   if(bloqueadoSemInternet()) return;
   const achado=acharEmendaPorId(id); if(!achado) return;
   confirmarAcao(`Excluir a emenda "${achado.emenda.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
-    try{
-      const antes = {ministerio:achado.emenda.ministerio,ano:achado.emenda.ano,objeto:achado.emenda.objeto,valor:achado.emenda.valor,situacao:achado.emenda.situacao};
-      await rpc('excluir_emenda',{p_token:SESSAO.token,p_id:id});
-      achado.municipio.emendas=achado.municipio.emendas.filter(e=>e.id!==id);
-      registrarHistoricoDados({acao:'excluir_emenda', municipioNome:achado.municipio.municipio, municipioId:achado.municipio.id, antes, resumo:antes.objeto});
-      aposGravar('Emenda excluída.');
-    }
+    try{ await rpc('excluir_emenda',{p_token:SESSAO.token,p_id:id}); achado.municipio.emendas=achado.municipio.emendas.filter(e=>e.id!==id); aposGravar('Emenda excluída.'); }
     catch(e){ toast(e.texto||e.message,'erro'); }
   }, {titulo:'Confirmar exclusão', label:'Excluir'});
 }
@@ -1316,18 +1248,14 @@ function confirmarOficio(p, oficioId){
   $('#cfo-confirmar').addEventListener('click', async ()=>{
     try{
       if(oficioId!=null){
-        const achadoAntes=acharOficioPorId(oficioId);
-        const antes = achadoAntes ? {ministerio:achadoAntes.oficio.ministerio,ano:achadoAntes.oficio.ano,objeto:achadoAntes.oficio.objeto,valor_solicitado:achadoAntes.oficio.valor_solicitado,recebido:achadoAntes.oficio.recebido,data_recebido:achadoAntes.oficio.data_recebido,solicitante:achadoAntes.oficio.solicitante,atendido:achadoAntes.oficio.atendido} : null;
         await rpc('atualizar_oficio',{p_token:SESSAO.token,p_id:oficioId,p:{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido}});
         const achado=acharOficioPorId(oficioId);
         if(achado) Object.assign(achado.oficio,{ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido,atendido_flag:(p.atendido||'').trim()?'SIM':'NÃO'});
-        if(antes) registrarHistoricoDados({acao:'editar_oficio', id:oficioId, antes, resumo:p.objeto});
       } else {
         const alvo=acharMunicipioPorNome(p.municipio);
         if(!alvo){ toast('Município não encontrado na base. Verifique o nome (escolha da lista de sugestões).','erro'); return; }
         const r=await rpc('inserir_oficio',{p_token:SESSAO.token,p:{municipio_id:alvo.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido}});
         alvo.oficios.push({id:r.id,ministerio:p.ministerio,ano:p.ano,objeto:p.objeto,valor_solicitado:p.valor_solicitado,recebido:p.recebido,data_recebido:p.data_recebido,solicitante:p.solicitante,atendido:p.atendido,atendido_flag:(p.atendido||'').trim()?'SIM':'NÃO'});
-        if(souGestor()) registrarHistoricoDados({acao:'inserir_oficio', id:r.id, resumo:p.objeto}); // excluir (o desfazer) só é permitido a gestor
       }
       aposGravar('Registrado com sucesso.');
     }catch(e){ toast(e.texto||e.message,'erro'); }
@@ -1337,13 +1265,7 @@ function excluirOficio(id){
   if(bloqueadoSemInternet()) return;
   const achado=acharOficioPorId(id); if(!achado) return;
   confirmarAcao(`Excluir o ofício "${achado.oficio.objeto}" de ${tituloCase(achado.municipio.municipio)}?`, async ()=>{
-    try{
-      const antes = {ministerio:achado.oficio.ministerio,ano:achado.oficio.ano,objeto:achado.oficio.objeto,valor_solicitado:achado.oficio.valor_solicitado,recebido:achado.oficio.recebido,data_recebido:achado.oficio.data_recebido,solicitante:achado.oficio.solicitante,atendido:achado.oficio.atendido};
-      await rpc('excluir_oficio',{p_token:SESSAO.token,p_id:id});
-      achado.municipio.oficios=achado.municipio.oficios.filter(o=>o.id!==id);
-      registrarHistoricoDados({acao:'excluir_oficio', municipioNome:achado.municipio.municipio, municipioId:achado.municipio.id, antes, resumo:antes.objeto});
-      aposGravar('Ofício excluído.');
-    }
+    try{ await rpc('excluir_oficio',{p_token:SESSAO.token,p_id:id}); achado.municipio.oficios=achado.municipio.oficios.filter(o=>o.id!==id); aposGravar('Ofício excluído.'); }
     catch(e){ toast(e.texto||e.message,'erro'); }
   }, {titulo:'Confirmar exclusão', label:'Excluir'});
 }
@@ -1437,12 +1359,9 @@ function confirmarMunicipio(d, nomeAnterior){
       if(nomeAnterior){
         const alvo = acharMunicipioPorNome(nomeAnterior);
         if(!alvo){ toast('Município não encontrado.','erro'); return; }
-        const antesDados = Object.fromEntries(Object.keys(dadosRest).map(k=>[k, JSON.parse(JSON.stringify(alvo[k]!==undefined?alvo[k]:null))]));
-        const antes = {id:alvo.id, nome:alvo.municipio, regiao:alvo.regiao, dados:antesDados};
         await rpc('atualizar_municipio',{p_token:SESSAO.token,p_id:alvo.id,p:{nome:nomeFinal, regiao, dados:dadosRest}});
         alvo.municipio = nomeFinal; alvo.regiao = regiao; Object.assign(alvo, dadosRest);
         if(estado.mun===nomeAnterior) estado.mun=nomeFinal;
-        registrarHistoricoDados({acao:'editar_municipio', id:antes.id, antes, resumo:tituloCase(antes.nome)});
       } else {
         const r = await rpc('inserir_municipio',{p_token:SESSAO.token,p:{nome:nomeFinal, regiao, tipo:'municipio', dados:dadosRest}});
         DADOS.push(Object.assign({id:r.id, municipio:nomeFinal, tipo:'municipio', regiao, emendas:[], oficios:[]}, dadosRest));
