@@ -312,6 +312,35 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
   table th:first-child{background:var(--surface-2);z-index:3}
   .resumo{gap:8px 14px}
 }
+/* ---- Análise de Votação (TSE) — docs/memoria/09-analise-votacao.md ---- */
+.vscroll{overflow-x:auto;padding-bottom:4px}
+.vcols{display:flex;gap:6px;align-items:flex-end;min-width:660px;height:190px;padding-top:6px}
+.vcols .vc{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.vcols .vv{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;margin-bottom:3px}
+.vcols .vb{width:72%;border-radius:4px 4px 0 0;min-height:2px;display:block}
+.vlabs{display:flex;gap:6px;min-width:660px;margin-top:4px}
+.vlabs span{flex:1;min-width:0;text-align:center;font-size:13px;color:var(--ink-2);line-height:1.2}
+.vlabs b{display:block;color:var(--ink)}
+.vleg{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;margin:4px 0 8px}
+.vleg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.vdest{border:2px solid var(--ouro);background:linear-gradient(180deg,#fffdf4,var(--surface) 70px)}
+.vchips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.vchip{font-size:14px;min-height:40px}
+.vfiltro{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:0 0 10px}
+.vfiltro label,.vbusca{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--ink-2);min-width:220px;flex:1;max-width:420px}
+.vbd{display:inline-block;padding:2px 9px;border-radius:999px;font-size:13px;font-weight:600;white-space:nowrap}
+.corr-on{font-weight:800;background:#eaf6ee}.corr-off{color:#8a8d96}.corr-bts{white-space:nowrap}.corr-bts .btn{margin:2px}.vchk{display:flex;align-items:center;gap:8px}.vchk input{width:22px;height:22px}
+.vst-ok{background:var(--good-bg);color:#0a6b0a}
+.vst-peq{background:var(--warn-bg);color:var(--warn)}
+.vst-dif{background:var(--crit-bg);color:var(--crit)}
+.vst-nd{background:var(--neutral-bg);color:var(--ink-2)}
+.vseal{display:inline-block;background:var(--good-bg);color:#0a6b0a;border-radius:8px;padding:0 6px;font-size:13px;font-weight:600;margin-left:6px}
+.vbar .n small{font-size:12px}
+.vgrp{margin-bottom:8px}
+.vgrp .vgn{font-weight:600;font-size:14px;margin-bottom:2px}
+.vneg{color:#c0392b;font-weight:600}.vpos{color:#0a6b0a;font-weight:600}
+.vot-card h3{margin:14px 0 6px}
+@media(max-width:480px){.vfiltro label,.vbusca{min-width:100%;max-width:none}}
 </style>
 </head>
 <body>
@@ -356,6 +385,8 @@ mark{background:#fff1a8;color:inherit;padding:0 1px;border-radius:2px}
     <button data-tab="emendas">Emendas</button>
     <button data-tab="oficios">Ofícios</button>
     <button data-tab="contatos">Contatos</button>
+    <button data-tab="votacao">Análise de Votação</button>
+    <button data-tab="correcoes">Correções de números</button>
     <button data-tab="usuarios" class="so-gestor hidden">Usuários</button>
     <button data-tab="auditoria" class="so-gestor hidden">Histórico</button>
   </nav>
@@ -928,6 +959,7 @@ function renderFicha(m){
     <div class="card"><h2>Companheiros e contatos</h2><div class="texto">${m.companheiros?textoComTel(m.companheiros).replace(/\s*\/\/\s*/g,'<br>'):'<span class="muted">Nenhum registrado.</span>'}</div>
       ${m.observacoes&&m.observacoes.length?`<h3>Outras anotações da ficha</h3><div class="texto">${m.observacoes.map(o=>textoComTel(o)).join('<br>')}</div>`:''}</div>
   </div>
+  ${votCardFicha(m)}
   ${m.emendas.length?`<div class="grid" style="margin-bottom:12px">
     <div class="card"><h2>Situação das emendas</h2>${rosca(agrupar(m.emendas,'situacao_grupo',e=>e.valor),{cores:COR_SIT,centro:brlCurto(m.emendas_total),centro2:m.emendas_qtd+' emendas'})}</div>
     <div class="card"><h2>Emendas por ano</h2>${colunas(agrupar(m.emendas,'ano',e=>e.valor).sort((a,b)=>a.n.localeCompare(b.n)))}</div>
@@ -1412,10 +1444,367 @@ function renderCabecalho(){
   atualizarRodape();
 }
 
+// ---------- ANÁLISE DE VOTAÇÃO (TSE) — ver docs/memoria/09-analise-votacao.md ----------
+// Aba "Análise de Votação" + card "Votação do Vanderlan (TSE oficial)" na ficha do município.
+// Mesmo trecho nos dois arquivos (app/index.html e ferramentas/modelo.html). Dados: votacao.json (online) ou const VOTACAO (offline).
+let VOT = (typeof VOTACAO!=='undefined') ? VOTACAO : null;
+let VOT_ERRO = false, VOT_CARREGANDO = null, VC = {}, VM = null, VT = {}, votTmr = null;
+const VS = { ele:'2026-sen', reg:'', conf:'diferente', q:{mun1:'',mun2:'',conf:''},
+  s:{ mun1:{k:'votos',dir:-1}, mun2:{k:'dif',dir:1}, conf:{k:'mun',dir:1} } };
+const VCOR = { ok:'#00a651', seg:'#345da8', nao:'#8a8d96', v18:'#9db4dc', v26:'#345da8', outros:'#a9b1c3' };
+
+function votCarregar(){
+  if(VOT) return Promise.resolve(VOT);
+  if(VOT_CARREGANDO) return VOT_CARREGANDO;
+  VOT_CARREGANDO = fetch('./votacao.json').then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.json(); })
+    .then(d=>{ VOT=d; VOT_ERRO=false; VC={}; VM=null; votAposCarga(); return d; })
+    .catch(()=>{ VOT_ERRO=true; VOT_CARREGANDO=null; votAposCarga(); return null; });
+  return VOT_CARREGANDO;
+}
+function votAposCarga(){ try{ if(typeof SESSAO!=='undefined' && !SESSAO) return; if(estado.tab==='votacao'||estado.mun) render(); }catch(e){} }
+
+// ---------- apoio ----------
+const votNomeKey = s => norm(String(s||'').replace(/[’‘`´]/g,"'"));
+const votEle = id => VOT.eleicoes.find(e=>e.id===id);
+const vp = (x,d=2) => x==null||isNaN(x) ? '—' : x.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d})+'%';
+const votSinal = n => n==null ? '—' : (n>0?'+':(n<0?'−':''))+int(Math.abs(n));
+const votSinalP = x => x==null||!isFinite(x) ? '—' : (x>0?'+':(x<0?'−':''))+vp(Math.abs(x),1);
+const votEleito = s => /^ELEIT/.test(norm(s));
+const votRes = s => votEleito(s) ? 'Eleito' : (/TURNO/.test(norm(s)) ? 'Foi ao 2º turno' : 'Não eleito');
+const votCorSit = s => votEleito(s) ? VCOR.ok : (/TURNO/.test(norm(s)) ? VCOR.seg : VCOR.nao);
+function votCurto(v){ if(v>=1e6) return (v/1e6).toLocaleString('pt-BR',{maximumFractionDigits:2})+' mi'; if(v>=1e3) return Math.round(v/1e3)+' mil'; return String(v); }
+function votRot(e){ const c = e.cargo==='Senador'?'Senado':(e.cargo==='Governador'?'Governo':(e.local==='Senador Canedo'?'S. Canedo':e.local)); return e.ano+' '+c+(e.cargo==='Prefeito'&&e.turno>1?' 2ºt':''); }
+function votRotLongo(e){ return e.ano+' · '+(e.cargo==='Prefeito'?'Prefeito de '+e.local:(e.cargo==='Senador'?'Senado':'Governo de Goiás'))+(e.turno>1?' (2º turno)':''); }
+function votMapas(){
+  if(VM && VM.ref===DADOS) return VM;
+  const nome2cod={}; Object.entries(VOT.municipios).forEach(([c,m])=>{ nome2cod[votNomeKey(m.nome)]=c; });
+  const apelido={'CIDADE DE GOIAS':'GOIAS'}; const cod2ficha={}, ficha2cod={};
+  DADOS.forEach(m=>{ if(m.tipo==='nacional') return; let k=votNomeKey(m.municipio); k=apelido[k]||k; const c=nome2cod[k]; if(c){ cod2ficha[c]=m.municipio; ficha2cod[m.municipio]=c; } });
+  return VM={ref:DADOS,cod2ficha,ficha2cod};
+}
+function votLinkMun(cod, nomeTse){ const f=votMapas().cod2ficha[cod]; const nome=tituloCase(f||nomeTse||''); return f ? `<span class="m" data-mun="${esc(f)}">${esc(nome)}</span>` : esc(nome); }
+function votLinhas(id){ // uma linha por município de uma eleição
+  if(VC[id]) return VC[id];
+  const e=votEle(id), out=[], idx={};
+  Object.entries(e.mun).forEach(([c,x])=>{
+    const mm=VOT.municipios[c]||{}; const vv=x.v[e.idx_vanderlan]||0; let pos=1, top=-1, ti=0;
+    x.v.forEach((v,i)=>{ if(v>vv) pos++; if(v>top){ top=v; ti=i; } });
+    const r={cod:c,nome:mm.nome||c,reg:mm.regiao||'Sem região',aptos:x.aptos,comp:x.comp,abst:x.abst,brancos:x.brancos,nulos:x.nulos,validos:x.validos,votos:vv,pct:x.validos?vv/x.validos*100:null,pos,venc:e.cands[ti].nome,vencV:top,vencP:e.cands[ti].partido,vencQ:x.v};
+    out.push(r); idx[c]=r; });
+  VC[id]=out; VC[id+'#']=idx; return out;
+}
+function votLinha(id,cod){ votLinhas(id); return VC[id+'#'][cod]; }
+
+// ---------- peças visuais ----------
+function votTile(lbl,val,sub){ return `<div class="tile"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub||''}</div></div>`; }
+function votBarra(rot, frac, txt, cor, tip, extra){ return `<div class="bar vbar" data-tip="${esc(tip||'')}" style="cursor:default"><span class="n">${rot}</span><span class="t"><i style="width:${Math.max(0.5,frac*100).toFixed(1)}%;background:${cor}"></i></span><span class="v">${txt}${extra||''}</span></div>`; }
+function votColunas(items, fmt){ // items: [{rot1,rot2,v,cor,tip}]
+  const max=Math.max(...items.map(i=>i.v),1);
+  return `<div class="vscroll"><div class="vcols">${items.map(i=>`<div class="vc" data-tip="${esc(i.tip||'')}"><span class="vv">${fmt(i.v)}</span><span class="vb" style="height:${Math.max(1,i.v/max*140).toFixed(0)}px;background:${i.cor}"></span></div>`).join('')}</div>
+  <div class="vlabs">${items.map(i=>`<span><b>${esc(i.rot1)}</b>${esc(i.rot2||'')}</span>`).join('')}</div></div>`;
+}
+function votLegenda(){ return `<div class="vleg"><span><i style="background:${VCOR.ok}"></i>Eleito</span><span><i style="background:${VCOR.seg}"></i>Foi ao 2º turno</span><span><i style="background:${VCOR.nao}"></i>Não eleito</span></div>`; }
+function votBarrasCands(e, dest){ // todos os concorrentes
+  const max=Math.max(...e.cands.map(c=>c.votos),1), val=e.totais.validos;
+  return `<div class="bars">${e.cands.map((c,i)=>{ const v=i===e.idx_vanderlan; const el=votEleito(c.sit);
+    return votBarra(`${esc(tituloCase(c.nome))} <small class="muted">${esc(c.partido)}</small>`, c.votos/max, `${int(c.votos)} · ${vp(val?c.votos/val*100:null)}`, v?'#345da8':VCOR.outros, `${c.nome_completo||c.nome} (${c.partido}) ${c.coligacao||''}`, el?'<span class="vseal">Eleito</span>':''); }).join('')}</div>`;
+}
+function votTabInner(id){
+  const d=VT[id](), s=VS.s[id]; let rows=d.rows.slice();
+  const col=d.cols.find(c=>c.k===s.k);
+  if(col) rows.sort((a,b)=>{ let x=col.get(a), y=col.get(b); if(x==null||x==='') return 1; if(y==null||y==='') return -1; return (typeof x==='number'&&typeof y==='number' ? x-y : String(x).localeCompare(String(y),'pt-BR'))*s.dir; });
+  VT[id].atual=rows;
+  return `<div class="resumo"><span><b>${int(rows.length)}</b> ${d.unid||'linhas'}</span><button class="btn sm" data-vcsv="${id}">Baixar planilha</button></div>
+  <div class="tbl-wrap"><table><thead><tr>${d.cols.map(c=>`<th class="${c.num?'num':''} ${s.k===c.k?'sorted':''} ${s.k===c.k&&s.dir>0?'asc':''}" data-vs="${id}|${c.k}">${c.label}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map(r=>`<tr>${d.cols.map(c=>`<td class="${c.num?'num':''}">${c.html?c.html(r):esc(c.get(r)==null?'—':c.get(r))}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${d.cols.length}" class="muted">Nada encontrado.</td></tr>`}</tbody></table></div>`;
+}
+const votTabela = id => `<div id="vt-${id}">${votTabInner(id)}</div>`;
+function votTabAtualiza(id){ const el=document.getElementById('vt-'+id); if(el) el.innerHTML=votTabInner(id); }
+const votBusca = (id,ph) => `<label class="vbusca">Buscar<input data-vq="${id}" value="${esc(VS.q[id]||'')}" placeholder="${esc(ph)}" autocomplete="off"></label>`;
+const votRegOk = r => !VS.reg || r.reg===VS.reg;
+const votStatusCls = s => ({'confere':'vst-ok','diferença pequena':'vst-peq','diferente':'vst-dif'}[s]||'vst-nd');
+const votStatusTxt = s => ({'confere':'Confere','diferença pequena':'Diferença pequena','diferente':'Diferente','sem dado na ficha':'Sem dado na ficha'}[s]||s);
+function votValorConf(campo,v){ if(v==null) return '—'; return /^%/.test(campo) ? vp(v) : (/Coloca/.test(campo) ? v+'º' : int(v)); }
+function votAgregaReg(id){ const m={}; votLinhas(id).forEach(r=>{ const a=m[r.reg]||(m[r.reg]={reg:r.reg,votos:0,aptos:0,validos:0,n:0,cand:{}}); a.votos+=r.votos; a.aptos+=r.aptos; a.validos+=r.validos; a.n++; r.vencQ.forEach((v,i)=>{ a.cand[i]=(a.cand[i]||0)+v; }); }); return m; }
+
+// ---------- definição das tabelas ----------
+VT.mun1 = ()=>{ const q=norm(VS.q.mun1||''); const e=votEle(VS.ele);
+  const rows=votLinhas(VS.ele).filter(r=>votRegOk(r)&&(!q||norm(r.nome+' '+r.venc).includes(q)));
+  return {unid:'municípios', rows, cols:[
+    {k:'nome',label:'Município',txt:1,get:r=>r.nome,html:r=>votLinkMun(r.cod,r.nome)},
+    {k:'reg',label:'Região',txt:1,get:r=>r.reg,html:r=>esc(tituloCase(r.reg))},
+    {k:'aptos',label:'Eleitores aptos',num:1,get:r=>r.aptos,html:r=>int(r.aptos)},
+    {k:'comp',label:'Compareceram',num:1,get:r=>r.comp,html:r=>int(r.comp)},
+    {k:'votos',label:'Votos do Vanderlan',num:1,get:r=>r.votos,html:r=>int(r.votos)},
+    {k:'pct',label:'% dos válidos',num:1,get:r=>r.pct,html:r=>vp(r.pct)},
+    {k:'pos',label:'Colocação',num:1,asc:1,get:r=>r.pos,html:r=>r.pos+'º'},
+    {k:'venc',label:'Vencedor no município',txt:1,get:r=>r.venc,html:r=>`${esc(tituloCase(r.venc))} <span class="muted">(${esc(r.vencP)} · ${int(r.vencV)})</span>`}] }; };
+VT.mun2 = (semBusca)=>{ const q=semBusca?'':norm(VS.q.mun2||''); const A=votLinhas('2018-sen'), B=votLinhas('2026-sen'); const ia=VC['2018-sen#'];
+  const rows=[]; B.forEach(b=>{ const a=ia[b.cod]; if(!a||!votRegOk(b)) return; if(q&&!norm(b.nome+' '+b.venc).includes(q)) return;
+    rows.push({cod:b.cod,nome:b.nome,reg:b.reg,a18:a.aptos,a26:b.aptos,v18:a.votos,v26:b.votos,dif:b.votos-a.votos,difp:a.votos?(b.votos-a.votos)/a.votos*100:null,p18:a.pct,p26:b.pct,pos18:a.pos,pos26:b.pos,venc:b.venc,vencP:b.vencP}); });
+  return {unid:'municípios', rows, cols:[
+    {k:'nome',label:'Município',txt:1,get:r=>r.nome,html:r=>votLinkMun(r.cod,r.nome)},
+    {k:'reg',label:'Região',txt:1,get:r=>r.reg,html:r=>esc(tituloCase(r.reg))},
+    {k:'a18',label:'Aptos 2018',num:1,get:r=>r.a18,html:r=>int(r.a18)},
+    {k:'a26',label:'Aptos 2026',num:1,get:r=>r.a26,html:r=>int(r.a26)},
+    {k:'v18',label:'Votos 2018',num:1,get:r=>r.v18,html:r=>int(r.v18)},
+    {k:'v26',label:'Votos 2026',num:1,get:r=>r.v26,html:r=>int(r.v26)},
+    {k:'dif',label:'Variação (votos)',num:1,asc:1,get:r=>r.dif,html:r=>`<span style="color:${r.dif<0?'#c0392b':'#0a6b0a'}">${votSinal(r.dif)}</span>`},
+    {k:'difp',label:'Variação (%)',num:1,asc:1,get:r=>r.difp,html:r=>`<span style="color:${r.difp<0?'#c0392b':'#0a6b0a'}">${votSinalP(r.difp)}</span>`},
+    {k:'p18',label:'% válidos 2018',num:1,get:r=>r.p18,html:r=>vp(r.p18)},
+    {k:'p26',label:'% válidos 2026',num:1,get:r=>r.p26,html:r=>vp(r.p26)},
+    {k:'pos18',label:'Colocação 2018',num:1,asc:1,get:r=>r.pos18,html:r=>r.pos18+'º'},
+    {k:'pos26',label:'Colocação 2026',num:1,asc:1,get:r=>r.pos26,html:r=>r.pos26+'º'},
+    {k:'venc',label:'1º colocado 2026',txt:1,get:r=>r.venc,html:r=>`${esc(tituloCase(r.venc))} <span class="muted">(${esc(r.vencP)})</span>`}] }; };
+VT.conf = ()=>{ const q=norm(VS.q.conf||''); const rows=[];
+  Object.entries(VOT.conferencia).forEach(([c,x])=>{ const mm=VOT.municipios[c]||{}; const reg=mm.regiao||'Sem região'; if(VS.reg&&reg!==VS.reg) return; if(q&&!norm(x.municipio).includes(q)) return;
+    x.itens.forEach(i=>{ if(VS.conf!=='todos'&&i.status!==VS.conf) return; rows.push({cod:c,mun:x.municipio,campo:i.campo,ficha:i.ficha,tse:i.tse,status:i.status}); }); });
+  return {unid:'itens', rows, cols:[
+    {k:'mun',label:'Município',txt:1,get:r=>r.mun,html:r=>{ const f=r.mun; return byName[f]?`<span class="m" data-mun="${esc(f)}">${esc(tituloCase(f))}</span>`:esc(tituloCase(f)); }},
+    {k:'campo',label:'O que foi conferido',txt:1,get:r=>r.campo,html:r=>esc(r.campo)},
+    {k:'ficha',label:'Na ficha',num:1,get:r=>r.ficha,html:r=>votValorConf(r.campo,r.ficha)},
+    {k:'tse',label:'No TSE oficial',num:1,get:r=>r.tse,html:r=>votValorConf(r.campo,r.tse)},
+    {k:'status',label:'Situação',txt:1,get:r=>r.status,html:r=>`<span class="vbd ${votStatusCls(r.status)}">${esc(votStatusTxt(r.status))}</span>`}] }; };
+
+// ---------- seções da aba ----------
+function votSecCarreira(){
+  const E=VOT.eleicoes; const vit=E.filter(e=>e.situacao==='ELEITO'); const maior=E.reduce((a,b)=>b.votos>a.votos?b:a);
+  const itV=E.map(e=>({rot1:String(e.ano),rot2:votRot(e).slice(5),v:e.votos,cor:votCorSit(e.situacao),tip:`${votRotLongo(e)}: ${int(e.votos)} votos · ${votRes(e.situacao)}`}));
+  const itP=E.map(e=>({rot1:String(e.ano),rot2:votRot(e).slice(5),v:e.totais.validos?e.votos/e.totais.validos*100:0,cor:votCorSit(e.situacao),tip:`${votRotLongo(e)}: ${vp(e.totais.validos?e.votos/e.totais.validos*100:null)} dos votos válidos`}));
+  const linhas=E.map(e=>({e, p:e.totais.validos?e.votos/e.totais.validos*100:null}));
+  return `<div class="secao"><h2>1. A carreira eleitoral</h2><span class="small">todas as eleições que o Senador disputou</span></div>
+  <div class="tiles">${votTile('Eleições disputadas',E.length,`de ${E[0].ano} a ${E[E.length-1].ano}`)}${votTile('Vitórias',vit.length,vit.map(e=>e.ano).join(', '))}${votTile('Maior votação',int(maior.votos),votRotLongo(maior)+' · '+maior.posicao+'º lugar')}</div>
+  <div class="card" style="margin-bottom:12px"><h2>Votos em cada eleição <span class="small">passe o dedo/mouse para ver os detalhes</span></h2>${votLegenda()}${votColunas(itV,votCurto)}</div>
+  <div class="card" style="margin-bottom:12px"><h2>Percentual dos votos válidos em cada eleição</h2>${votColunas(itP,v=>vp(v,1))}<div class="nota">No Senado cada eleitor vota em 2 nomes, por isso o percentual aparece menor do que numa eleição de 1 vaga.</div></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Ano</th><th>Cargo</th><th>Onde</th><th class="num">Nº</th><th>Partido</th><th class="num">Votos</th><th class="num">% válidos</th><th class="num">Colocação</th><th>Resultado</th><th class="num">Eleitores aptos</th><th class="num">Compareceram</th></tr></thead><tbody>
+  ${linhas.map(({e,p})=>`<tr><td><b>${e.ano}</b></td><td>${esc(e.cargo)}${e.turno>1?' (2º turno)':''}</td><td>${esc(e.local)}</td><td class="num">${e.numero}</td><td>${esc(e.partido)}</td><td class="num">${int(e.votos)}</td><td class="num">${vp(p)}</td><td class="num">${e.posicao}º</td><td><span class="vbd" style="background:${votCorSit(e.situacao)};color:#fff">${votRes(e.situacao)}</span></td><td class="num">${int(e.totais.aptos)}</td><td class="num">${int(e.totais.comp)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function votSecEleicao(){
+  const e=votEle(VS.ele), t=e.totais, estadual=e.abrangencia==='estado'; const base=t.validos+t.brancos+t.nulos;
+  const chips=VOT.eleicoes.map(x=>`<button type="button" class="btn sm vchip ${x.id===VS.ele?'primary':''}" data-vele="${x.id}">${esc(votRot(x))}</button>`).join('');
+  let h=`<div class="secao" id="vsec-ver"><h2>2. Ver uma eleição</h2><span class="small">escolha a eleição para ver todos os números</span></div>
+  <div class="vchips">${chips}</div>
+  <div class="card" style="margin-bottom:12px"><h2>${esc(votRotLongo(e))} <span class="small">${votRes(e.situacao)} · ${e.posicao}º lugar · nº ${e.numero} ${esc(e.partido)}</span></h2>
+  ${e.coligacao?`<div class="texto"><b>Coligação dele:</b> ${esc(e.coligacao)}${e.composicao?` <span class="muted">(${esc(e.composicao)})</span>`:''}</div>`:''}
+  ${e.vagas>1?'<div class="dica" style="font-size:14px">No Senado cada eleitor vota em 2 nomes, por isso o total de votos válidos é quase o dobro de quem compareceu.</div>':''}</div>
+  <div class="tiles">${votTile('Eleitores aptos',int(t.aptos),'quem podia votar')}${votTile('Compareceram',int(t.comp),vp(t.aptos?t.comp/t.aptos*100:null,1)+' dos aptos')}${votTile('Abstenção',int(t.abst),vp(t.aptos?t.abst/t.aptos*100:null,1)+' dos aptos')}${votTile('Votos brancos',int(t.brancos),vp(base?t.brancos/base*100:null,1)+' dos votos dados')}${votTile('Votos nulos',int(t.nulos),vp(base?t.nulos/base*100:null,1)+' dos votos dados')}${votTile('Votos válidos',int(t.validos),vp(base?t.validos/base*100:null,1)+' dos votos dados')}</div>
+  <div class="card" style="margin-bottom:12px"><h2>Todos os concorrentes <span class="small">votos · % dos válidos</span></h2>${votBarrasCands(e)}</div>`;
+  if(!estadual) return h;
+  const A=votAgregaReg(e.id), regs=Object.values(A).sort((a,b)=>b.votos-a.votos);
+  const linhas=votLinhas(e.id).filter(votRegOk);
+  const posCount={}; linhas.forEach(r=>{ posCount[r.pos]=(posCount[r.pos]||0)+1; });
+  const posItens=Object.keys(posCount).map(Number).sort((a,b)=>a-b).map(p=>({n:p+'º',v:posCount[p],q:null,tip:`Ficou em ${p}º lugar em ${posCount[p]} município(s)`}));
+  const topPct=[...linhas].filter(r=>r.pct!=null).sort((a,b)=>b.pct-a.pct).slice(0,15), topV=[...linhas].sort((a,b)=>b.votos-a.votos).slice(0,15);
+  const bm=(arr,fn,fmt)=>barras(arr.map(r=>({n:votMapas().cod2ficha[r.cod]||r.nome,v:fn(r),tip:`${tituloCase(r.nome)}: ${int(r.votos)} votos · ${vp(r.pct)} · ${r.pos}º lugar`})),{fmt,mun:true,rotulo:tituloCase,limite:15});
+  h+=`<div class="grid">
+    <div class="card"><h2>Votos por região <span class="small">${regs.length} regiões</span></h2>${barras(regs.map(a=>({n:tituloCase(a.reg),v:a.votos,tip:`${tituloCase(a.reg)}: ${int(a.votos)} votos · ${vp(a.validos?a.votos/a.validos*100:null)} dos válidos`})),{fmt:int,limite:12})}</div>
+    <div class="card"><h2>Em quantos municípios ficou em cada lugar${VS.reg?' <span class="small">'+esc(tituloCase(VS.reg))+'</span>':''}</h2>${linhas.length?colunas(posItens,{fmt:int,sec:true}):'<div class="muted">Sem municípios.</div>'}</div>
+  </div>
+  <div class="grid">
+    <div class="card"><h2>15 municípios com maior % <span class="small">dos votos válidos</span></h2>${bm(topPct,r=>r.pct,v=>vp(v))}</div>
+    <div class="card"><h2>15 municípios com mais votos</h2>${bm(topV,r=>r.votos,int)}</div>
+  </div>
+  <div class="secao"><h2>Todos os municípios <span class="small">${esc(votRotLongo(e))}</span></h2></div>
+  <div class="vfiltro">${votBusca('mun1','nome do município ou do vencedor')}</div>${votTabela('mun1')}`;
+  return h;
+}
+function votSecQuadro(){
+  const a=votEle('2018-sen'), b=votEle('2026-sen'), ta=a.totais, tb=b.totais, pa=ta.validos?a.votos/ta.validos*100:null, pb=tb.validos?b.votos/tb.validos*100:null;
+  const dif=(x,y)=>`${votSinal(y-x)} <span class="muted">(${votSinalP(x?(y-x)/x*100:null)})</span>`;
+  const Aa=votAgregaReg('2018-sen'), Ab=votAgregaReg('2026-sen'); const regs=Object.keys(Ab).sort((x,y)=>Ab[y].votos-Ab[x].votos);
+  // concorrentes diretos de 2026 por região
+  const conc=b.cands.map((c,i)=>({c,i})).filter(x=>x.i!==b.idx_vanderlan).slice(0,6);
+  const lista=VT.mun2(true).rows;
+  const perdeu=[...lista].filter(r=>r.dif<0).sort((x,y)=>x.dif-y.dif).slice(0,15), ganhou=[...lista].sort((x,y)=>y.dif-x.dif).slice(0,15);
+  const bm=(arr,sinal)=>barras(arr.map(r=>({n:votMapas().cod2ficha[r.cod]||r.nome,v:Math.abs(r.dif),tip:`${tituloCase(r.nome)}: ${int(r.v18)} em 2018 → ${int(r.v26)} em 2026 (${votSinal(r.dif)})`})),{fmt:v=>sinal+int(v),mun:true,rotulo:tituloCase,limite:15});
+  const rowsReg=regs.map(r=>{ const x=Aa[r]?Aa[r].votos:0, y=Ab[r].votos; return {r,x,y}; });
+  return `<div class="secao" id="vsec-quadro"><h2>3. Senado 2026 x 2018</h2><span class="small">o quadro principal</span></div>
+  <div class="card vdest" style="margin-bottom:12px"><h2>Vanderlan no Senado: 2018 e 2026 lado a lado</h2>
+  <div class="dica" style="font-size:14px">No Senado cada eleitor vota em 2 nomes, por isso o total de votos válidos é quase o dobro de quem compareceu.</div>
+  <div class="tbl-wrap"><table><thead><tr><th></th><th class="num">2018</th><th class="num">2026</th><th class="num">Diferença</th></tr></thead><tbody>
+    <tr><td><b>Votos</b></td><td class="num">${int(a.votos)}</td><td class="num">${int(b.votos)}</td><td class="num">${dif(a.votos,b.votos)}</td></tr>
+    <tr><td><b>% dos votos válidos</b></td><td class="num">${vp(pa)}</td><td class="num">${vp(pb)}</td><td class="num">${pa!=null&&pb!=null?((pb-pa>0?'+':'−')+vp(Math.abs(pb-pa))):'—'}</td></tr>
+    <tr><td><b>Colocação</b></td><td class="num">${a.posicao}º</td><td class="num">${b.posicao}º</td><td class="num"></td></tr>
+    <tr><td><b>Resultado</b></td><td class="num">${votRes(a.situacao)}</td><td class="num">${votRes(b.situacao)}</td><td class="num"></td></tr>
+    <tr><td><b>Eleitores aptos</b></td><td class="num">${int(ta.aptos)}</td><td class="num">${int(tb.aptos)}</td><td class="num">${dif(ta.aptos,tb.aptos)}</td></tr>
+    <tr><td><b>Compareceram</b></td><td class="num">${int(ta.comp)}</td><td class="num">${int(tb.comp)}</td><td class="num">${dif(ta.comp,tb.comp)}</td></tr>
+  </tbody></table></div></div>
+  <div class="grid">
+    <div class="card"><h2>Votos por região <span class="small">2018 e 2026</span></h2><div class="vleg"><span><i style="background:${VCOR.v18}"></i>2018</span><span><i style="background:${VCOR.v26}"></i>2026</span></div>
+      <div class="bars">${(()=>{ const mx=Math.max(...rowsReg.map(o=>Math.max(o.x,o.y)),1); return rowsReg.map(o=>`<div class="vgrp"><div class="vgn">${esc(tituloCase(o.r))}</div>${votBarra('2018',o.x/mx,int(o.x),VCOR.v18,'')}${votBarra('2026',o.y/mx,int(o.y),VCOR.v26,'',` <small class="${o.y<o.x?'vneg':'vpos'}">${votSinalP(o.x?(o.y-o.x)/o.x*100:null)}</small>`)}</div>`).join(''); })()}</div></div>
+    <div class="card"><h2>Por região em números</h2><div class="tbl-wrap"><table><thead><tr><th>Região</th><th class="num">Votos 2018</th><th class="num">Votos 2026</th><th class="num">Variação</th><th class="num">Variação %</th></tr></thead><tbody>
+      ${rowsReg.map(o=>`<tr><td>${esc(tituloCase(o.r))}</td><td class="num">${int(o.x)}</td><td class="num">${int(o.y)}</td><td class="num"><span class="${o.y<o.x?'vneg':'vpos'}">${votSinal(o.y-o.x)}</span></td><td class="num"><span class="${o.y<o.x?'vneg':'vpos'}">${votSinalP(o.x?(o.y-o.x)/o.x*100:null)}</span></td></tr>`).join('')}
+      <tr><td><b>Goiás</b></td><td class="num"><b>${int(a.votos)}</b></td><td class="num"><b>${int(b.votos)}</b></td><td class="num"><b>${votSinal(b.votos-a.votos)}</b></td><td class="num"><b>${votSinalP(a.votos?(b.votos-a.votos)/a.votos*100:null)}</b></td></tr></tbody></table></div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px"><h2>Contra os concorrentes diretos de 2026, por região <span class="small">votos de cada um; em destaque o mais votado da região</span></h2><div class="tbl-wrap"><table><thead><tr><th>Região</th><th class="num">Vanderlan</th>${conc.map(x=>`<th class="num">${esc(tituloCase(x.c.nome))} <small>${esc(x.c.partido)}</small></th>`).join('')}</tr></thead><tbody>
+    ${regs.map(r=>{ const A=Ab[r].cand; const vals=[b.idx_vanderlan,...conc.map(x=>x.i)].map(i=>A[i]||0); const mx=Math.max(...vals); return `<tr><td>${esc(tituloCase(r))}</td>${vals.map(v=>`<td class="num">${v===mx?`<b>${int(v)}</b>`:int(v)}</td>`).join('')}</tr>`; }).join('')}</tbody></table></div></div>
+  <div class="grid">
+    <div class="card"><h2>Onde mais perdeu votos <span class="small">2026 contra 2018${VS.reg?' · '+esc(tituloCase(VS.reg)):''}</span></h2>${perdeu.length?bm(perdeu,'−'):'<div class="muted">Nenhum município perdeu votos neste recorte.</div>'}</div>
+    <div class="card"><h2>Onde manteve ou ganhou mais votos <span class="small">2026 contra 2018${VS.reg?' · '+esc(tituloCase(VS.reg)):''}</span></h2>${bm(ganhou,'+')}</div>
+  </div>
+  <div class="secao"><h2>Município por município <span class="small">Senado 2018 e 2026</span></h2></div>
+  <div class="vfiltro">${votBusca('mun2','nome do município ou do 1º colocado')}</div>${votTabela('mun2')}`;
+}
+function votSecConferencia(){
+  const t=corrItens(), nT=t.filter(r=>r.uso==='tse').length;
+  return `<div class="secao"><h2>4. Conferência: fichas x TSE</h2><span class="small">os números das fichas comparados com o TSE oficial</span></div>
+  <div class="tiles">${votTile('Números diferentes',int(t.length),int(new Set(t.map(r=>r.mun)).size)+' municípios')}${votTile('Usando o número do TSE',int(nT),'número oficial')}${votTile('Usando outro número',int(t.length-nT),'ficha ou digitado')}</div>
+  <div class="card" style="margin-bottom:12px">A lista completa, com a escolha entre o número da ficha, o do TSE ou outro digitado, está na aba <b>Correções de números</b>. <button type="button" class="btn sm primary" data-go='{"tab":"correcoes"}'>Abrir Correções de números</button></div>`;
+}
+function renderVotacao(){
+  if($('#barra')) $('#barra').innerHTML='';
+  const raiz=$('#conteudo')||$('#app');
+  if(!VOT){
+    raiz.innerHTML=`<h1>Análise de Votação</h1><div class="card">${VOT_ERRO?'<b>Dados de votação indisponíveis no momento.</b> <span class="muted">Confira a internet e tente de novo mais tarde.</span>':'Carregando os dados de votação…'}</div>`;
+    if(!VOT_ERRO) votCarregar(); return;
+  }
+  const regs=[...new Set(Object.values(VOT.municipios).map(m=>m.regiao).filter(Boolean))].sort();
+  raiz.innerHTML=`<div class="secao"><h1 style="margin:0">Análise de Votação</h1><span class="muted small">toda a carreira eleitoral do Senador Vanderlan Cardoso, com dados oficiais do TSE</span></div>
+  <div class="dica">Toque nos nomes dos municípios em azul para abrir a ficha. Toque no título de uma coluna da tabela para ordenar.</div>
+  <div class="vfiltro vtopo"><label>Região (vale para as listas e tabelas por município)<select data-vsel="reg"><option value="">Todo o estado de Goiás</option>${regs.map(r=>`<option value="${esc(r)}" ${VS.reg===r?'selected':''}>${esc(tituloCase(r))}</option>`).join('')}</select></label></div>
+  ${votSecCarreira()}${votSecEleicao()}${votSecQuadro()}${votSecConferencia()}
+  <div class="nota">Fonte: TSE — dados oficiais. Atualizado em ${esc(VOT.gerado_em)}.</div>`;
+}
+
+// ---------- card da ficha do município ----------
+function votCardFicha(m){
+  if(!VOT) return '';
+  const cod=votMapas().ficha2cod[m.municipio]; if(!cod) return '';
+  const a=votLinha('2018-sen',cod), b=votLinha('2026-sen',cod); if(!a&&!b) return '';
+  const ea=votEle('2018-sen'), eb=votEle('2026-sen');
+  const cmp=(x,y,f)=>x==null||y==null?'':`${votSinal(y-x)}`;
+  let quadro='', top5='';
+  if(a&&b){
+    quadro=`<h3>Senado: 2026 contra 2018 neste município</h3><div class="tbl-wrap"><table><thead><tr><th></th><th class="num">2018</th><th class="num">2026</th><th class="num">Diferença</th></tr></thead><tbody>
+    <tr><td>Eleitores aptos</td><td class="num">${int(a.aptos)}</td><td class="num">${int(b.aptos)}</td><td class="num">${votSinal(b.aptos-a.aptos)}</td></tr>
+    <tr><td>Compareceram</td><td class="num">${int(a.comp)}</td><td class="num">${int(b.comp)}</td><td class="num">${votSinal(b.comp-a.comp)}</td></tr>
+    <tr><td><b>Votos do Vanderlan</b></td><td class="num"><b>${int(a.votos)}</b></td><td class="num"><b>${int(b.votos)}</b></td><td class="num"><b>${votSinal(b.votos-a.votos)}</b> <span class="muted">(${votSinalP(a.votos?(b.votos-a.votos)/a.votos*100:null)})</span></td></tr>
+    <tr><td>% dos votos válidos</td><td class="num">${vp(a.pct)}</td><td class="num">${vp(b.pct)}</td><td class="num"></td></tr>
+    <tr><td>Colocação aqui</td><td class="num">${a.pos}º</td><td class="num">${b.pos}º</td><td class="num"></td></tr>
+    <tr><td>Quem ficou em 1º</td><td class="num">${esc(tituloCase(a.venc))}</td><td class="num">${esc(tituloCase(b.venc))}</td><td class="num"></td></tr></tbody></table></div>`;
+  }
+  if(b){
+    const lst=eb.cands.map((c,i)=>({c,i,v:b.vencQ[i]})).sort((x,y)=>y.v-x.v); const max=Math.max(lst[0].v,1); const vi=lst.findIndex(x=>x.i===eb.idx_vanderlan);
+    const mostra=lst.slice(0,5); if(vi>=5) mostra.push(lst[vi]);
+    top5=`<h3>Os mais votados aqui em 2026</h3><div class="bars">${mostra.map(x=>{ const pos=lst.indexOf(x)+1; return votBarra(`${pos}º ${esc(tituloCase(x.c.nome))} <small class="muted">${esc(x.c.partido)}</small>`, x.v/max, `${int(x.v)} · ${vp(b.validos?x.v/b.validos*100:null)}`, x.i===eb.idx_vanderlan?'#345da8':VCOR.outros, ''); }).join('')}</div>`;
+  }
+  const ids=['2010-gov','2014-gov','2018-sen','2026-sen']; const linhas=[];
+  VOT.eleicoes.forEach(e=>{ if(e.abrangencia==='estado'? ids.includes(e.id) : !!e.mun[cod]){ const r=votLinha(e.id,cod); if(r) linhas.push({e,r}); } });
+  const tabela=`<h3>Eleições do Vanderlan neste município</h3><div class="tbl-wrap"><table><thead><tr><th>Eleição</th><th class="num">Votos aqui</th><th class="num">% válidos</th><th class="num">Colocação aqui</th><th>1º colocado aqui</th><th>Resultado geral</th></tr></thead><tbody>
+  ${linhas.map(({e,r})=>`<tr><td><b>${esc(votRotLongo(e))}</b></td><td class="num">${int(r.votos)}</td><td class="num">${vp(r.pct)}</td><td class="num">${r.pos}º</td><td>${esc(tituloCase(r.venc))} <span class="muted">(${esc(r.vencP)} · ${int(r.vencV)})</span></td><td>${votRes(e.situacao)}</td></tr>`).join('')}</tbody></table></div>`;
+  const cf=VOT.conferencia[cod], cr=corrItens(m);
+  const conf=cr.length?`<h3>Correções de números: ficha x TSE</h3>${corrTabela(cr,true)}<div class="nota">O "Número em uso" é o que vale no programa.</div>`:(cf&&cf.itens.length?'<div class="nota">Os números de 2018 e 2024 desta ficha conferem com o TSE.</div>':'');
+  return `<div class="card vot-card" style="margin-bottom:12px"><h2>Votação do Vanderlan (TSE oficial) <span class="small">${esc(tituloCase(VOT.municipios[cod].nome))}</span></h2>
+  <div class="dica" style="font-size:14px;margin-top:0">No Senado cada eleitor vota em 2 nomes, por isso o total de votos válidos é quase o dobro de quem compareceu.</div>
+  ${quadro}${top5}${tabela}${conf}</div>`;
+}
+
+// ---------- eventos (ligados uma vez só) ----------
+document.addEventListener('click', e=>{
+  const ch=e.target.closest('[data-vele]'); if(ch){ VS.ele=ch.dataset.vele; renderVotacao(); const s=document.getElementById('vsec-ver'); if(s) s.scrollIntoView(); return; }
+  const so=e.target.closest('[data-vs]'); if(so){ const [id,k]=so.dataset.vs.split('|'); const s=VS.s[id]; const c=VT[id]().cols.find(x=>x.k===k); if(s.k===k) s.dir=-s.dir; else { s.k=k; s.dir=(c&&(c.txt||c.asc))?1:-1; } votTabAtualiza(id); return; }
+  const cv=e.target.closest('[data-vcsv]'); if(cv){ const id=cv.dataset.vcsv; const d=VT[id](); votTabInner(id); csv(VT[id].atual, d.cols.map(c=>({label:c.label,get:c.get})), 'votacao-'+id+'.csv'); return; }
+});
+document.addEventListener('input', e=>{ const q=e.target.closest('[data-vq]'); if(q){ const id=q.dataset.vq; VS.q[id]=q.value; clearTimeout(votTmr); votTmr=setTimeout(()=>votTabAtualiza(id),200); } });
+document.addEventListener('change', e=>{ const s=e.target.closest('[data-vsel]'); if(s){ VS[s.dataset.vsel]=s.value; renderVotacao(); } });
+if(!VOT) votCarregar();
+
+// ---------- CORREÇÕES DE NÚMEROS (fichas x TSE) — ver docs/memoria/10-correcoes.md ----------
+// Cada município guarda em `correcoes_tse` os números que estavam diferentes do TSE:
+// {campo, antes (ficha), depois (TSE), quando, escolha: 'tse'|'ficha'|'digitado', valor_digitado, escolhido_por, escolhido_em}.
+// O Responsável escolhe, item por item, qual número vale; a escolha é gravada no banco (atualizar_municipio) e fica no Histórico.
+const CORR_CAMPOS = {'Votos 2018':['eleicao_2018','votos_vanderlan'],'Eleitores 2018':['eleicao_2018','eleitores'],'% 2018 (válidos)':['eleicao_2018','percentual'],'Colocação 2018':['eleicao_2018','classificacao'],'Eleitores 2024':[null,'eleitores_2024']};
+const CORR_USO = {tse:'TSE', ficha:'Ficha', digitado:'Digitado'};
+const CS = {q:'', campo:'', uso:'', reg:'', peq:false};
+const corrPodeEscolher = () => typeof rpc==='function' && typeof souGestor==='function' && souGestor();
+function corrNum(v){ const n=parseFloat(String(v??'').replace(',','.').replace(/[ºª°\s]/g,'')); return isNaN(n)?null:n; }
+function corrFmt(campo,v){ if(v==null||v==='') return '—'; const n=corrNum(v); if(n==null) return esc(String(v)); if(/^%/.test(campo)) return vp(n); if(/Coloca/.test(campo)) return n+'º'; return int(n); }
+function corrItens(m){ const out=[]; (m?[m]:MUNS).forEach(x=>(x.correcoes_tse||[]).forEach((c,i)=>{ const a=corrNum(c.antes), d=corrNum(c.depois);
+  out.push({m:x,i,c,mun:x.municipio,reg:x.regiao||'Sem região',campo:c.campo,ficha:c.antes,tse:c.depois,uso:CORR_USO[c.escolha]?c.escolha:'tse',dig:c.valor_digitado,dif:(a!=null&&d!=null)?d-a:null,difp:(a&&d!=null)?(d-a)/Math.abs(a)*100:null}); })); return out; }
+const corrPequena = r => /Eleitores/.test(r.campo) && r.difp!=null && Math.abs(r.difp)<=1;
+function corrFiltrados(){ const q=norm(CS.q||''); return corrItens().filter(r=>(!CS.campo||r.campo===CS.campo)&&(!CS.uso||r.uso===CS.uso)&&(!CS.reg||r.reg===CS.reg)&&(!CS.peq||!corrPequena(r))&&(!q||norm(r.mun).includes(q))); }
+function corrDif(r){ if(r.dif==null) return '—'; if(/^%/.test(r.campo)) return votSinalP(r.dif); if(/Coloca/.test(r.campo)) return (r.dif>0?'+':'')+r.dif; return votSinal(r.dif)+(r.difp!=null?` <span class="muted">(${votSinalP(r.difp)})</span>`:''); }
+function corrTabela(rows, semMun){
+  const pode=corrPodeEscolher();
+  if(!rows.length) return '<div class="card muted">Nada encontrado.</div>';
+  const bt=(r,k,esc_,txt)=>`<button type="button" class="btn sm ${r.uso===esc_?'primary':''}" data-corr="${k}|${esc_}" ${r.uso===esc_&&esc_!=='digitado'?'disabled':''}>${txt}</button>`;
+  return `<div class="tbl-wrap"><table class="corr-tab"><thead><tr>${semMun?'':'<th>Município</th>'}<th>O que</th><th class="num">Número da ficha</th><th class="num">Número do TSE</th><th class="num">Diferença</th><th class="num">Número em uso</th>${pode?'<th>Escolher</th>':''}</tr></thead><tbody>
+  ${rows.map(r=>{ const k=esc(r.mun)+'|'+r.i; const quem=r.c.escolhido_por?`escolhido por ${r.c.escolhido_por} em ${String(r.c.escolhido_em||'').split('-').reverse().join('/')}`:'correção automática pelo TSE';
+    const emUso=r.uso==='ficha'?r.ficha:(r.uso==='digitado'?r.dig:r.tse);
+    return `<tr>${semMun?'':`<td><span class="m" data-mun="${esc(r.mun)}">${esc(tituloCase(r.mun))}</span></td>`}<td>${esc(r.campo)}</td>
+    <td class="num ${r.uso==='ficha'?'corr-on':'corr-off'}">${corrFmt(r.campo,r.ficha)}</td><td class="num ${r.uso==='tse'?'corr-on':'corr-off'}">${corrFmt(r.campo,r.tse)}</td>
+    <td class="num">${corrDif(r)}</td><td class="num"><b>${corrFmt(r.campo,emUso)}</b> <span class="vbd ${r.uso==='tse'?'vst-ok':'vst-peq'}" title="${esc(quem)}">${CORR_USO[r.uso]}</span></td>
+    ${pode?`<td class="corr-bts">${bt(r,k,'ficha','Usar ficha')}${bt(r,k,'tse','Usar TSE')}${bt(r,k,'digitado','Digitar outro')}</td>`:''}</tr>`; }).join('')}</tbody></table></div>`;
+}
+function corrLista(){ const rows=corrFiltrados(), pode=corrPodeEscolher();
+  return `<div class="resumo"><span><b>${int(rows.length)}</b> número(s) na lista</span>
+  ${pode&&rows.length?`<button type="button" class="btn sm" data-corr-todos="ficha">Usar ficha em todos da lista</button><button type="button" class="btn sm primary" data-corr-todos="tse">Usar TSE em todos da lista</button>`:''}</div>${corrTabela(rows)}`; }
+function renderCorrecoes(){
+  if($('#barra')) $('#barra').innerHTML='';
+  const raiz=$('#conteudo')||$('#app');
+  const todos=corrItens(), cont=u=>todos.filter(r=>r.uso===u).length, pode=corrPodeEscolher();
+  const regs=[...new Set(MUNS.map(m=>m.regiao).filter(Boolean))].sort();
+  const sel=(k,rot,ops)=>`<label>${rot}<select data-csel="${k}">${ops.map(([v,t])=>`<option value="${esc(v)}" ${CS[k]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`;
+  raiz.innerHTML=`<div class="secao"><h1 style="margin:0">Correções de números</h1><span class="muted small">números das fichas x números oficiais do TSE</span></div>
+  <div class="dica">Cada linha é um número que estava <b>diferente</b> na ficha. Aparecem o número da ficha, o número oficial do TSE e o número que vale hoje no programa.
+  ${pode?' Escolha em cada linha: <b>Usar ficha</b>, <b>Usar TSE</b> ou <b>Digitar outro</b> número. A escolha fica gravada e registrada no Histórico.':(typeof rpc==='function'?' Só o Responsável pode trocar a escolha.':' Para trocar a escolha, use o sistema online.')}</div>
+  <div class="tiles">${votTile('Números diferentes',int(todos.length),int(new Set(todos.map(r=>r.mun)).size)+' municípios')}${votTile('Usando o número do TSE',int(cont('tse')),'número oficial')}${votTile('Usando o número da ficha',int(cont('ficha')),'escolhido pelo Responsável')}${votTile('Número digitado',int(cont('digitado')),'informado pelo Responsável')}</div>
+  <div class="vfiltro">${sel('campo','O que',[['','Todos'],...Object.keys(CORR_CAMPOS).map(c=>[c,c])])}${sel('uso','Em uso',[['','Todos'],['tse','Só os que usam TSE'],['ficha','Só os que usam a ficha'],['digitado','Só os digitados']])}${sel('reg','Região',[['','Todo o estado'],...regs.map(r=>[r,tituloCase(r)])])}
+  <label class="vchk"><input type="checkbox" data-csel="peq" ${CS.peq?'checked':''}> Esconder diferenças pequenas de eleitores (até 1%)</label>
+  <label class="vbusca">Buscar<input data-cq value="${esc(CS.q)}" placeholder="nome do município" autocomplete="off"></label></div>
+  <div id="corr-lista">${corrLista()}</div>
+  <div class="nota">Números do TSE: dados oficiais (Senado 2018 e eleitores aptos na eleição municipal de 2024). "Diferença" = TSE menos ficha.</div>`;
+}
+async function corrEscolher(alvos, escolha, digitado){ // alvos: [{m, idxs:[índices em m.correcoes_tse]}]
+  if(!corrPodeEscolher()){ toast('Só o Responsável pode escolher.','erro'); return; }
+  if(bloqueadoSemInternet()) return;
+  if(typeof fecharModal==='function') fecharModal();
+  let ok=0, erro=0, n=0; const hoje=new Date().toISOString().slice(0,10), quem=SESSAO.usuario.nome||SESSAO.usuario.login;
+  for(const {m,idxs} of alvos){
+    const e18={...(m.eleicao_2018||{})}; let e24=m.eleitores_2024??null; const corr=(m.correcoes_tse||[]).map(c=>({...c}));
+    idxs.forEach(i=>{ const c=corr[i]; const [obj,k]=CORR_CAMPOS[c.campo]||[]; if(!k) return;
+      const v=escolha==='ficha'?c.antes:(escolha==='digitado'?digitado:c.depois); if(obj) e18[k]=v; else e24=v;
+      c.escolha=escolha; if(escolha==='digitado') c.valor_digitado=digitado; else delete c.valor_digitado; c.escolhido_por=quem; c.escolhido_em=hoje; });
+    try{ await rpc('atualizar_municipio',{p_token:SESSAO.token,p_id:m.id,p:{dados:{eleicao_2018:e18,eleitores_2024:e24,correcoes_tse:corr}}});
+      m.eleicao_2018=e18; m.eleitores_2024=e24; m.correcoes_tse=corr; ok++; }
+    catch(err){ erro++; if(err&&err.codigo==='SESSAO_INVALIDA') break; }
+    if(alvos.length>5 && ++n%20===0) toast(`Gravando… ${n} de ${alvos.length} municípios`);
+  }
+  recalcular();
+  toast(erro?`Gravado em ${ok} município(s); ${erro} com erro. Tente de novo.`:(ok>1?`Escolha gravada em ${ok} municípios.`:'Escolha gravada.'), erro?'erro':'ok');
+  render();
+}
+function corrDigitar(m, i){ // pede o número e confirma antes de gravar
+  const c=m.correcoes_tse[i], pct=/^%/.test(c.campo), col=/Coloca/.test(c.campo);
+  const atual=c.escolha==='digitado'?c.valor_digitado:'';
+  abrirModal(`<h2>Digitar outro número</h2><p><b>${esc(tituloCase(m.municipio))}</b> · ${esc(c.campo)}</p>
+  <dl class="kv confirm"><dt>Número da ficha</dt><dd>${corrFmt(c.campo,c.antes)}</dd><dt>Número do TSE</dt><dd>${corrFmt(c.campo,c.depois)}</dd></dl>
+  <label class="campo">Novo número${pct?' (%, ex.: 31,5)':(col?' (colocação, ex.: 2)':'')}<input id="corr-dig" inputmode="decimal" autocomplete="off" value="${esc(atual==null?'':String(atual).replace('º','').replace('.',','))}"></label>
+  <div class="form-acoes"><button type="button" class="btn" id="corr-dig-cancelar">Cancelar</button><button type="button" class="btn ok" id="corr-dig-ok">Gravar este número</button></div>`);
+  const inp=$('#corr-dig'); if(inp) inp.focus();
+  $('#corr-dig-cancelar').addEventListener('click', fecharModal);
+  $('#corr-dig-ok').addEventListener('click', ()=>{
+    const t=String(inp.value||'').trim(); const n=corrNum(t.replace(/\./g, pct?'.':''));
+    if(n==null||n<0){ toast('Digite um número válido.','erro'); return; }
+    const v = col ? Math.round(n)+'º' : (pct ? Math.round(n*100)/100 : Math.round(n));
+    corrEscolher([{m,idxs:[i]}],'digitado',v);
+  });
+}
+document.addEventListener('click', e=>{
+  const b=e.target.closest('[data-corr]'); if(b){ const [mun,i,escolha]=b.dataset.corr.split('|'); const m=byName[mun]; if(!m) return;
+    if(escolha==='digitado'){ if(corrPodeEscolher()&&!bloqueadoSemInternet()) corrDigitar(m,+i); } else corrEscolher([{m,idxs:[+i]}],escolha); return; }
+  const t=e.target.closest('[data-corr-todos]'); if(t){ const escolha=t.dataset.corrTodos; const rows=corrFiltrados().filter(r=>r.uso!==escolha);
+    if(!rows.length){ toast('Todos os números da lista já estão assim.'); return; }
+    const g=new Map(); rows.forEach(r=>{ if(!g.has(r.m)) g.set(r.m,[]); g.get(r.m).push(r.i); });
+    confirmarAcao(`Usar o número ${escolha==='tse'?'do TSE':'da ficha'} em ${rows.length} número(s) de ${g.size} município(s)?`, ()=>corrEscolher([...g].map(([m,idxs])=>({m,idxs})),escolha), {titulo:'Confirmar a escolha',label:'Sim, gravar',perigo:false}); return; }
+});
+document.addEventListener('input', e=>{ const q=e.target.closest('[data-cq]'); if(q){ CS.q=q.value; clearTimeout(votTmr); votTmr=setTimeout(()=>{ const el=document.getElementById('corr-lista'); if(el) el.innerHTML=corrLista(); },200); } });
+document.addEventListener('change', e=>{ const s=e.target.closest('[data-csel]'); if(s){ const k=s.dataset.csel; CS[k]=s.type==='checkbox'?s.checked:s.value; renderCorrecoes(); } });
+
 // ---------- render (despacho por aba) ----------
 function render(){
   if(estado.mun){ if(byName[estado.mun]) renderFicha(byName[estado.mun]); else { estado.mun=null; renderPainel(); } return; }
-  ({painel:renderPainel,municipios:renderMunicipios,emendas:renderEmendas,oficios:renderOficios,contatos:renderContatos,busca:renderBusca,usuarios:renderUsuarios,auditoria:renderAuditoria}[estado.tab]||renderPainel)();
+  ({painel:renderPainel,municipios:renderMunicipios,emendas:renderEmendas,oficios:renderOficios,contatos:renderContatos,votacao:renderVotacao,correcoes:renderCorrecoes,busca:renderBusca,usuarios:renderUsuarios,auditoria:renderAuditoria}[estado.tab]||renderPainel)();
 }
 
 // ---------- overlays de tela cheia ----------
